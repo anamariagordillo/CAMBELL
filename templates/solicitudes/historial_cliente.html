@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block titulo %}Historial - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="solicitudes-container">
+        <h2>Historial de servicios</h2>
+        <p class="txt-s fs13">Tus solicitudes terminadas, canceladas o en curso.</p>
+
+        {% if solicitudes %}
+            <table class="tabla-historial">
+                <tr>
+                    <th>Servicio</th>
+                    <th>Categoría</th>
+                    <th>Zona</th>
+                    <th>Trabajador</th>
+                    <th>Estado</th>
+                    <th>Calificación</th>
+                    <th>Pago</th>
+                </tr>
+                {% for s in solicitudes %}
+                    <tr>
+                        <td>{{ s.descripcion }}</td>
+                        <td>{{ s.get_categoria_display }}</td>
+                        <td>{{ s.zona }}</td>
+                        <td>
+                            {% if s.trabajador %}
+                                {% url 'solicitudes:perfil_trabajador' s.id as url_perfil %}
+                                {% if url_perfil %}<a href="{{ url_perfil }}" class="txt-narc">{{ s.trabajador.nombre }}</a>{% else %}{{ s.trabajador.nombre }}{% endif %}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge-estado">
+                                {% if s.estado == 'COMPLETADA' %}<span class="st-completada">Completado</span>
+                                {% elif s.estado == 'CANCELADA' %}<span class="st-cancelada">Cancelado</span>
+                                {% elif s.estado == 'ACEPTADA' %}<span class="st-aceptada">En curso</span>
+                                {% else %}{{ s.get_estado_display }}{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if s.calificacion %}
+                                {{ "★★★★★"|slice:s.calificacion }}
+                                {% if s.comentario %}<span class="txt-s">· {{ s.comentario }}</span>{% endif %}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            {% if s.pago %}
+                                <span class="st-pagado">✓ Pagado</span>
+                            {% elif s.estado == 'COMPLETADA' %}
+                                {% url 'pagos:pagar' s.id as url_pago %}
+                                {% if url_pago %}<a href="{{ url_pago }}" class="txt-nar">Pagar</a>{% else %}-{% endif %}
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p class="no-solicitudes">Aún no tienes servicios cerrados.</p>
+        {% endif %}
+    </section>
+{% endblock %}

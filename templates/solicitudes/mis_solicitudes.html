@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mis solicitudes - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="solicitudes-container">
+        <h2>Mis solicitudes</h2>
+
+        <div class="filtros mb20">
+            <span class="filtros-label">Filtrar:</span>
+            <a href="{% url 'solicitudes:mis_solicitudes' %}" class="filtro-chip {% if not filtro_actual %}activo{% endif %}">Todas</a>
+            <a href="?estado=PENDIENTE" class="filtro-chip {% if filtro_actual == 'PENDIENTE' %}activo{% endif %}">Pendientes</a>
+            <a href="?estado=ACEPTADA" class="filtro-chip {% if filtro_actual == 'ACEPTADA' %}activo{% endif %}">En curso</a>
+            <a href="?estado=COMPLETADA" class="filtro-chip {% if filtro_actual == 'COMPLETADA' %}activo{% endif %}">Completadas</a>
+            <a href="?estado=CANCELADA" class="filtro-chip {% if filtro_actual == 'CANCELADA' %}activo{% endif %}">Canceladas</a>
+        </div>
+        <p class="txt-s fs13 mb15">Ordenadas del más reciente al más antiguo.</p>
+
+        {% include "_mensajes.html" %}
+
+        {% url 'pagos:suscripcion' as url_premium %}
+        {% if url_premium %}
+            <div class="sup br8 p16 mb15 dflex fww aci jcsb gap15">
+                <div class="flex1">
+                    <p class="m0 fw700 fs19"><span class="txt-nar">Hazte Premium</span> · Servicio prioritario y sin esperas</p>
+                    <p class="txt-s fs13 m4t0">Acuerda tarifas con tus trabajadores de confianza y recibe asistencia prioritaria en cada solicitud.</p>
+                </div>
+                <a href="{{ url_premium }}" class="btn-hero-principal wauto tdn">Ver planes premium</a>
+            </div>
+        {% endif %}
+
+        {% for s in solicitudes %}
+            <div class="sup br8 p20 mb15">
+                <p><strong>{{ s.descripcion }}</strong></p>
+                <p>Zona: {{ s.zona }}</p>
+                <p>Estado: {{ s.get_estado_display }}</p>
+
+                {% if s.trabajador %}
+                    <p>Trabajador asignado:
+                        {% url 'solicitudes:perfil_trabajador' s.id as url_perfil %}
+                        {% if url_perfil %}
+                            <a href="{{ url_perfil }}" class="txt-narc tdn">{{ s.trabajador.nombre }} (ver perfil)</a>
+                        {% else %}
+                            {{ s.trabajador.nombre }}
+                        {% endif %}
+                    </p>
+                {% endif %}
+
+                {% if s.estado == 'ACEPTADA' and s.codigo_finalizacion %}
+                    <div class="sup bdr-nar br8 p12 mt10">
+                        <p class="txt-narc fs12 m0">Código para el trabajador</p>
+                        <p class="txt-nar fs22 fw800 lsp4 m4t0">{{ s.codigo_finalizacion }}</p>
+                        <p class="txt-s fs12 m8t0">Entrégale este código al trabajador para que pueda finalizar el trabajo.</p>
+                    </div>
+                {% endif %}
+
+                <div class="sup br8 p12 mt10">
+                    <p class="fs12 m0"><span class="fw600">Método de pago: </span>
+                        {% if s.metodo_pago %}
+                            {{ s.metodo_pago.get_tipo_display }} · {{ s.metodo_pago.numero_enmascarado }} ({{ s.metodo_pago.titular }})
+                        {% else %}
+                            <span class="txt-s">sin especificar (se elige al pagar)</span>
+                        {% endif %}
+                    </p>
+                    {% if s.direccion_especifica %}
+                        <p class="fs12 m4t0">
+                            <span class="fw600">Dirección específica: </span>{{ s.direccion_especifica }}
+                            {% if s.estado != 'ACEPTADA' %}<span class="txt-s">(visible para el trabajador cuando confirme la solicitud)</span>{% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+
+                {% if s.estado == 'PENDIENTE' %}
+                    <form method="post" action="{% url 'solicitudes:cancelar' s.id %}" class="mt10">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-hero-secundario wauto"
+                                onclick="return confirm('¿Seguro que quieres cancelar esta solicitud?');">Cancelar</button>
+                    </form>
+                {% endif %}
+
+                {% if s.calificacion %}
+                    <div class="sep pt15 mt15">
+                        <p>Tu calificación: <span>{{ "★★★★★"|slice:s.calificacion }}</span></p>
+                        {% if s.comentario %}<p>"{{ s.comentario }}"</p>{% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="dflex fww gap10 sep pt15 mt15">
+                    {% url 'mensajeria:chat' s.id as url_chat %}
+                    {% if url_chat %}<a href="{{ url_chat }}" class="btn-hero-secundario dib tdn wauto">Ver mensajes</a>{% endif %}
+
+                    {% if s.estado == 'COMPLETADA' %}
+                        {% if s.pago %}
+                            <span class="txt-ok">✓ Servicio pagado</span>
+                        {% else %}
+                            {% url 'pagos:pagar' s.id as url_pago %}
+                            {% if url_pago %}<a href="{{ url_pago }}" class="btn-hero-principal dib tdn wauto">Pagar servicio</a>{% endif %}
+                        {% endif %}
+                    {% endif %}
+
+                    {% if s.trabajador %}
+                        {% url 'seguridad:reportar' s.id as url_reportar %}
+                        {% if url_reportar %}<a href="{{ url_reportar }}" class="dib txt-err fs13 tdn wauto">Reportar trabajador</a>{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <p class="no-solicitudes">Aún no tienes solicitudes para el filtro seleccionado.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Nueva solicitud - Cambell{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'lib/leaflet/leaflet.css' %}">
+    <script src="{% static 'lib/leaflet/leaflet.js' %}"></script>
+{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card maxw560">
+            <h2>Solicitar un servicio</h2>
+
+            {% if form.errors %}
+                <div class="banner-error">
+                    Revisa estos datos:
+                    <ul>
+                        {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                        {% for campo in form %}{% for e in campo.errors %}<li>{{ campo.label }}: {{ e }}</li>{% endfor %}{% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'solicitudes:nueva' %}" id="formSolicitud">
+                {% csrf_token %}
+
+                <label>Descripción del trabajo</label>
+                {{ form.descripcion }}
+
+                <label>Categoría del servicio</label>
+                {{ form.categoria }}
+
+                <div class="campo-map">
+                    <label>Localidad de Bogotá</label>
+                    <select id="selectLocalidad" required>
+                        <option value="">Selecciona una localidad</option>
+                        {% for item in localidades %}
+                            <option value="{{ item.localidad }}">{{ item.localidad }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label>Barrio</label>
+                    <select id="selectBarrio" required disabled>
+                        <option value="">Primero elige la localidad</option>
+                    </select>
+
+                    <label>Ubicación en el mapa (haz clic sobre el mapa para marcar el punto)</label>
+                    <div id="mapaSolicitud"></div>
+                    <small class="txt-s fs11">El punto marcado define la zona exacta del trabajo.</small>
+                </div>
+
+                <label>Dirección específica (se revela al trabajador cuando confirme la solicitud)</label>
+                {{ form.direccion_especifica }}
+
+                <label>¿Con qué método de pago se realizará?</label>
+                <select name="metodo_pago" id="selectMetodoPago" class="campo txt-p p10 mb15 w100">
+                    <option value="">Selecciona un método de pago</option>
+                    {% for m in metodos_pago %}
+                        <option value="{{ m.id }}" {% if form.metodo_pago.value|stringformat:"s" == m.id|stringformat:"s" %}selected{% endif %}>{{ m.get_tipo_display }} · {{ m.numero_enmascarado }} ({{ m.titular }})</option>
+                    {% endfor %}
+                </select>
+                {% if not metodos_pago %}
+                    <p class="txt-s fs13 mb10">
+                        No tienes métodos de pago registrados.
+                        {% url 'pagos:metodos' as url_metodos %}
+                        {% if url_metodos %}<a href="{{ url_metodos }}" class="txt-nar">Registrar uno</a>{% else %}Podrás registrarlos más adelante.{% endif %}
+                    </p>
+                {% endif %}
+
+                <label>Precio que ofertas ($)</label>
+                {{ form.precio_ofertado }}
+
+                {{ form.localidad }}
+                {{ form.barrio }}
+                {{ form.latitud }}
+                {{ form.longitud }}
+
+                <button type="submit" class="btn-hero-principal" id="btnEnviar">Enviar solicitud</button>
+            </form>
+        </div>
+    </section>
+
+    {{ localidades|json_script:"datos-localidades" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var localidadesData = JSON.parse(document.getElementById('datos-localidades').textContent);
+
+    var selectLocalidad = document.getElementById('selectLocalidad');
+    var selectBarrio = document.getElementById('selectBarrio');
+    var inputLocalidad = document.getElementById('inputLocalidad');
+    var inputBarrio = document.getElementById('inputBarrio');
+    var inputLatitud = document.getElementById('inputLatitud');
+    var inputLongitud = document.getElementById('inputLongitud');
+
+    // Mapa centrado en Bogotá
+    var mapaLoc = L.map('mapaSolicitud').setView([4.6533, -74.0513], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(mapaLoc);
+    var marcador = null;
+
+    function ubicarMarcador(lat, lon) {
+        if (marcador) { mapaLoc.removeLayer(marcador); }
+        marcador = L.marker([lat, lon]).addTo(mapaLoc);
+        inputLatitud.value = lat;
+        inputLongitud.value = lon;
+    }
+
+    // Al elegir una localidad, se llena la lista de sus barrios
+    function poblarBarrios() {
+        var localidadSel = selectLocalidad.value;
+        selectBarrio.innerHTML = '';
+        selectBarrio.disabled = true;
+        inputLocalidad.value = localidadSel;
+        inputBarrio.value = '';
+
+        var opcionDefault = document.createElement('option');
+        opcionDefault.value = '';
+        opcionDefault.textContent = 'Elige un barrio';
+        selectBarrio.appendChild(opcionDefault);
+
+        var ref = localidadesData.find(function (l) { return l.localidad === localidadSel; });
+        if (ref) {
+            ref.barrios.forEach(function (b) {
+                var op = document.createElement('option');
+                op.value = b.nombre;
+                op.textContent = b.nombre;
+                op.dataset.lat = b.lat;
+                op.dataset.lon = b.lon;
+                selectBarrio.appendChild(op);
+            });
+            selectBarrio.disabled = false;
+            if (ref.barrios.length > 0) {
+                mapaLoc.setView([ref.barrios[0].lat, ref.barrios[0].lon], 13);
+            }
+        }
+    }
+
+    selectLocalidad.addEventListener('change', poblarBarrios);
+
+    // Al elegir un barrio, el marcador salta a ese barrio
+    selectBarrio.addEventListener('change', function () {
+        var opcion = selectBarrio.options[selectBarrio.selectedIndex];
+        inputBarrio.value = selectBarrio.value;
+        if (opcion && opcion.dataset.lat) {
+            ubicarMarcador(parseFloat(opcion.dataset.lat), parseFloat(opcion.dataset.lon));
+        }
+    });
+
+    // También se puede marcar el punto exacto haciendo clic en el mapa
+    mapaLoc.on('click', function (e) { ubicarMarcador(e.latlng.lat, e.latlng.lng); });
+
+    document.getElementById('formSolicitud').addEventListener('submit', function (e) {
+        if (!inputLatitud.value || !inputLongitud.value) {
+            e.preventDefault();
+            alert('Por favor marca el punto de ubicación en el mapa.');
+        }
+    });
+
+    // Si el servidor devolvió errores, se restauran la localidad, el barrio y el punto.
+    (function restaurar() {
+        if (!inputLocalidad.value) return;
+        var localidad = inputLocalidad.value, barrio = inputBarrio.value;
+        var lat = inputLatitud.value, lon = inputLongitud.value;
+        selectLocalidad.value = localidad;
+        poblarBarrios();
+        if (barrio) { selectBarrio.value = barrio; inputBarrio.value = barrio; }
+        if (lat && lon) {
+            ubicarMarcador(parseFloat(lat), parseFloat(lon));
+            mapaLoc.setView([parseFloat(lat), parseFloat(lon)], 14);
+        }
+    })();
+</script>
+{% endblock %}

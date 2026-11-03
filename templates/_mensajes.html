@@ -1,0 +1,3 @@
+{% for mensaje in messages %}
+    <p class="{% if mensaje.tags == 'error' %}sup-err txt-err{% else %}sup-ok txt-ok{% endif %} br8 p12 mb15">{{ mensaje }}</p>
+{% endfor %}

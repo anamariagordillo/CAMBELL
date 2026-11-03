@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block contenido %}
+    <section class="hero" id="hero">
+        <div class="hero-grid">
+            <div class="hero-texto">
+                <h1>Conectamos el talento<br/>de tu <span class="highlight">barrio</span>, con seguridad</h1>
+                <p>La plataforma que da visibilidad a trabajadores técnicos independientes en Colombia, garantizando confianza a través de perfiles verificados.</p>
+
+                <div class="hero-botones">
+                    <a href="{% url 'usuarios:registro' %}" class="btn-hero-principal">Buscar un servicio</a>
+                    <a href="{% url 'usuarios:registro' %}" class="btn-hero-secundario">Ofrecer mis servicios</a>
+                </div>
+
+                <div class="hero-numeros">
+                    <div class="hero-numero"><span class="num">+200</span><span class="lab">trabajadores verificados</span></div>
+                    <div class="hero-numero"><span class="num">+40</span><span class="lab">oficios disponibles</span></div>
+                    <div class="hero-numero"><span class="num">98%</span><span class="lab">trabajos completados</span></div>
+                </div>
+            </div>
+
+            <div class="hero-imagen">
+                <div class="hero-marco">
+                    <img class="hero-foto" src="{% static 'img/hero-tecnico.jpg' %}" alt="Técnico profesional realizando un trabajo en el hogar"/>
+                    <p class="txt-s fs13 m0 mt10">Profesionales verificados listos para tu barrio.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="valores" id="valores">
+        <div class="valores-grid">
+            <div class="valor-card">
+                <div class="valor-ico">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5.25-3.5 8.5-8 10-4.5-1.5-8-4.75-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+                </div>
+                <h3>Filtro de seguridad</h3>
+                <p>Verificación de antecedentes e identidad para cada trabajador registrado.</p>
+            </div>
+            <div class="valor-card">
+                <div class="valor-ico">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12l3.5 3.5L17 8"/><path d="M12 3l7 4v5c0 4.2-2.8 6.8-7 9-4.2-2.2-7-4.8-7-9V7z"/></svg>
+                </div>
+                <h3>Trato justo y directo</h3>
+                <p>Sin intermediarios que se queden con altas comisiones; el trabajo va directo al prestador.</p>
+            </div>
+            <div class="valor-card">
+                <div class="valor-ico">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <h3>Trazabilidad local</h3>
+                <p>Sistema basado en reputación real y ubicación, fortaleciendo la economía del barrio.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="como-funciona" id="como-funciona">
+        <h2 class="tac fs36 fw800 mb6">¿Cómo funciona?</h2>
+        <p class="tac txt-s fs19 mxa maxw620">En tres pasos conectas a tu barrio con talento técnico verificado.</p>
+        <div class="pasos-grid">
+            <div class="paso-card"><span class="paso-num">1</span><h3>Regístrate</h3><p>Crea tu cuenta gratis como cliente, trabajador o aliado comercial. Verificamos identidad y antecedentes.</p></div>
+            <div class="paso-card"><span class="paso-num">2</span><h3>Busca o publica tu servicio</h3><p>Un cliente publica su solicitud con ubicación exacta; los trabajadores compatibles pueden aceptar el trabajo.</p></div>
+            <div class="paso-card"><span class="paso-num">3</span><h3>Conecta con confianza</h3><p>El pago se procesa de forma segura y el trabajo se evalúa con calificaciones reales.</p></div>
+        </div>
+    </section>
+
+    <section class="aliados" id="aliados">
+        <h2 class="tac fs36 fw800 mb6">Aliados comerciales</h2>
+        <p class="tac txt-s fs19 mxa maxw620 mb30">Negocios de confianza que respaldan a los trabajadores de tu barrio.</p>
+
+        {% if anuncios %}
+        <div class="aliados-grid">
+            {% for a in anuncios %}
+            <div class="aliado-card">
+                <div class="aliado-img">
+                    {% if a.imagen %}
+                        <img src="{{ a.imagen.url }}" alt="{{ a.titulo }}"/>
+                    {% else %}
+                        <div class="aliado-placeholder">
+                            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+                        </div>
+                    {% endif %}
+                </div>
+                <h3>{{ a.titulo }}</h3>
+                <p>{{ a.descripcion }}</p>
+                <span class="aliado-tag">Aliado verificado</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="tac txt-s">Pronto tendremos aliados comerciales en tu barrio.</p>
+        {% endif %}
+    </section>
+
+    <section class="contacto p60" id="contacto">
+        <h2 class="tac fs36 fw800 mb6">Novedades o sugerencias</h2>
+        <p class="tac txt-s fs19 mxa maxw620 mb30">¿Notaste algo o quieres comunicar una novedad? Escríbenos por cualquiera de estos canales.</p>
+        <div class="contacto-grid">
+            <a class="contacto-card" href="mailto:cambell0934742@gmail.com">
+                <h3>Correo</h3>
+                <p class="fs17 fw500">cambell0934742@gmail.com</p>
+                <span class="txt-s fs13">Cuéntanos la novedad por correo</span>
+            </a>
+            <a class="contacto-card" href="https://wa.me/573144040951" target="_blank" rel="noopener">
+                <h3>WhatsApp</h3>
+                <p class="fs17 fw500">314 404 0951</p>
+                <span class="txt-s fs13">Escríbenos directo por WhatsApp</span>
+            </a>
+        </div>
+    </section>
+{% endblock %}
+
+{% block footer %}
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <div class="logo">Cambell</div>
+                <p class="txt-s fs13">El talento técnico de tu barrio, verificado y conectado.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Enlaces rápidos</h4>
+                <a href="{% url 'usuarios:inicio' %}">Inicio</a>
+                <a href="/#como-funciona">Cómo funciona</a>
+                <a href="/#aliados">Aliados</a>
+                <a href="/#contacto">Contacto</a>
+                <a href="{% url 'usuarios:login' %}">Iniciar sesión</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contacto</h4>
+                <p class="fs13">Bogotá, Colombia</p>
+                <p class="fs13">cambell0934742@gmail.com</p>
+                <p class="fs13">WhatsApp: <a href="https://wa.me/573144040951" target="_blank" rel="noopener">314 404 0951</a></p>
+            </div>
+        </div>
+        <p class="footer-copy">&copy; Cambell 2026 - Todos los derechos reservados</p>
+    </footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!('IntersectionObserver' in window)) return;
+        document.documentElement.classList.add('fade-secciones');
+        var secciones = document.querySelectorAll('.hero-grid, .valores, .como-funciona, .aliados, .contacto, .footer');
+        var obs = new IntersectionObserver(function (entradas) {
+            entradas.forEach(function (ent) {
+                if (ent.isIntersecting) { ent.target.classList.add('visible'); obs.unobserve(ent.target); }
+            });
+        }, { threshold: 0.15 });
+        secciones.forEach(function (s) { obs.observe(s); });
+    });
+</script>
+{% endblock %}

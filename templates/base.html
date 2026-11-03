@@ -1,0 +1,115 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}Cambell - Trabajo técnico confiable{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <script src="{% static 'js/tema.js' %}" defer></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <nav class="navbar">
+    {% if not user.is_authenticated %}
+
+        <div class="flex1 dflex aci jcsb">
+            <div class="logo">Cambell</div>
+            <div class="nav-links">
+                <button type="button" class="btn-tema-nav" id="btnTemaHome" aria-label="Cambiar tema claro/oscuro" title="Cambiar a tema claro"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+                <a href="{% url 'usuarios:inicio' %}">Inicio</a>
+                <a href="{% url 'usuarios:login' %}">Iniciar sesión</a>
+                <a href="{% url 'usuarios:registro' %}" class="btn-nav">Regístrate</a>
+            </div>
+        </div>
+
+    {% elif user.rol == 'ADMINISTRADOR' %}
+
+        <div class="flex1 dflex aci jcsb">
+            <div class="logo">Cambell · Admin</div>
+            <div class="nav-links">
+                {% for item in nav_items %}
+                    <a href="{{ item.url }}" class="{% if item.activo %}activo{% endif %}">{{ item.etiqueta }}</a>
+                {% endfor %}
+                <a href="{% url 'admin:index' %}">Gestión</a>
+                <form method="post" action="{% url 'usuarios:logout' %}" class="dinl ml18">
+                    {% csrf_token %}
+                    <button type="submit" class="bg0 txt-p b0 fw500 curp">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+
+    {% elif user.rol == 'CLIENTE' %}
+
+        <div class="flex1 dflex aci jcsb">
+            <div class="dflex aci gap15">
+                <a href="{% url 'usuarios:panel' %}" class="nav-volver" title="Volver">←</a>
+                <div class="logo">Cambell</div>
+            </div>
+            <div class="nav-links">
+                {% for item in nav_items %}
+                    <a href="{{ item.url }}" class="btn-nav">{{ item.etiqueta }}{% if item.nombre == 'mensajeria:notificaciones' and no_leidos %} <span class="bg-nar txt-p br10 fs11 p1x7">{{ no_leidos }}</span>{% endif %}</a>
+                {% endfor %}
+                <div class="menu-container">
+                    <button type="button" class="menu-btn" onclick="toggleMenu()" title="Menú">☰</button>
+                    <div id="dropdownMenu" class="dropdown-content">
+                        {% for item in menu_items %}<a href="{{ item.url }}">{{ item.etiqueta }}</a>{% endfor %}
+                        {% if menu_items %}<hr>{% endif %}
+                        <form method="post" action="{% url 'usuarios:logout' %}">
+                            {% csrf_token %}
+                            <button type="submit">Cerrar sesión</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+
+        <div class="flex1 dflex aci jcsb">
+            <div class="dflex aci gap15">
+                <a href="{% url 'usuarios:panel' %}" class="nav-volver" title="Volver">←</a>
+                <div class="logo">Cambell</div>
+            </div>
+            <div class="nav-links">
+                {% if user.rol == 'TRABAJADOR' and estado_verificacion == 'PENDIENTE' %}
+                    <span class="badge badge-estado" title="Tu cuenta está en revisión por un administrador">Verificación en curso</span>
+                {% endif %}
+                {% for item in nav_items %}
+                    <a href="{{ item.url }}" class="{% if item.activo %}activo{% endif %}">{{ item.etiqueta }}{% if item.nombre == 'mensajeria:notificaciones' and no_leidos %} <span class="bg-nar txt-p br10 fs11 p1x7">{{ no_leidos }}</span>{% endif %}</a>
+                {% endfor %}
+                <form method="post" action="{% url 'usuarios:logout' %}" class="dinl">
+                    {% csrf_token %}
+                    <button type="submit" class="bg0 txt-p b0 fw500 curp">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+    </nav>
+
+    {% block contenido %}{% endblock %}
+
+    {% block footer %}
+    <footer class="footer">
+        <p>&copy; Cambell 2026 - Todos los derechos reservados</p>
+    </footer>
+    {% endblock %}
+
+    <script>
+        function toggleMenu() {
+            var menu = document.getElementById("dropdownMenu");
+            if (menu) { menu.style.display = (menu.style.display === "block") ? "none" : "block"; }
+        }
+        window.addEventListener("click", function (event) {
+            if (!event.target.matches(".menu-btn")) {
+                var menus = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < menus.length; i++) {
+                    if (menus[i].style.display === "block") { menus[i].style.display = "none"; }
+                }
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

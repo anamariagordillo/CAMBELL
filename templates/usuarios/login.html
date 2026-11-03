@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block titulo %}Iniciar sesión - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="login-wrap">
+
+        <div class="login-visual">
+            <div class="carrusel">
+                <div class="carrusel-slides">
+                    <div class="carrusel-item activo">
+                        <img src="{% static 'img/ilustracion-tecnico.svg' %}" alt="Técnico verificado">
+                        <h3>Profesionales verificados</h3>
+                        <p>Cada trabajador pasa verificación de identidad y antecedentes antes de operar en la plataforma.</p>
+                    </div>
+                    <div class="carrusel-item">
+                        <img src="{% static 'img/ilustracion-cliente.svg' %}" alt="Solicitud desde la app">
+                        <h3>Un técnico cercano en minutos</h3>
+                        <p>Crea tu solicitud, coordina por el chat interno y paga de forma segura, todo en un solo lugar.</p>
+                    </div>
+                    <div class="carrusel-item">
+                        <img src="{% static 'img/ilustracion-confianza.svg' %}" alt="Confianza garantizada">
+                        <h3>Confianza de tu barrio</h3>
+                        <p>Calificaciones, historial y cobertura local para que el servicio llegue a quien lo necesita.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="carrusel-dots">
+                <button type="button" class="carrusel-dot activo" data-slide="0" aria-label="Diapositiva 1"></button>
+                <button type="button" class="carrusel-dot" data-slide="1" aria-label="Diapositiva 2"></button>
+                <button type="button" class="carrusel-dot" data-slide="2" aria-label="Diapositiva 3"></button>
+            </div>
+        </div>
+
+        <div class="login-form-col">
+            <div class="auth-card">
+                <h2>Iniciar sesión</h2>
+
+                {% for mensaje in messages %}
+                    <p class="{% if mensaje.tags == 'error' %}sup-err txt-err{% else %}sup-ok txt-ok{% endif %} br6 fs14 p12 mb15">{{ mensaje }}</p>
+                {% endfor %}
+
+                {% if form.errors %}
+                    <p class="sup-err txt-err br6 fs14 p12 mb15">{% for e in form.non_field_errors %}{{ e }}{% empty %}Revisa tu correo y contraseña.{% endfor %}</p>
+                {% endif %}
+
+                <form method="post" action="{% url 'usuarios:login' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next }}">
+
+                    <label for="{{ form.username.id_for_label }}">Correo</label>
+                    {{ form.username }}
+
+                    <label for="{{ form.password.id_for_label }}">Contraseña</label>
+                    {{ form.password }}
+
+                    <button type="submit" class="btn-hero-principal">Ingresar</button>
+                </form>
+                <p class="auth-link">¿No tienes cuenta? <a href="{% url 'usuarios:registro' %}">Regístrate aquí</a></p>
+            </div>
+        </div>
+
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var items = document.querySelectorAll('.carrusel-item');
+        var dots = document.querySelectorAll('.carrusel-dot');
+        if (!items.length) return;
+        var actual = 0;
+        var timer;
+
+        function mostrar(idx) {
+            items[actual].classList.remove('activo');
+            dots[actual].classList.remove('activo');
+            actual = (idx + items.length) % items.length;
+            items[actual].classList.add('activo');
+            dots[actual].classList.add('activo');
+        }
+        function avanzar() { mostrar(actual + 1); }
+        function reiniciar() { clearInterval(timer); timer = setInterval(avanzar, 4500); }
+
+        dots.forEach(function (dot) {
+            dot.addEventListener('click', function () {
+                mostrar(parseInt(dot.getAttribute('data-slide'), 10));
+                reiniciar();
+            });
+        });
+        reiniciar();
+    })();
+</script>
+{% endblock %}

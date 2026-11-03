@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mi panel - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card maxw560">
+            <h2>Hola, {{ user.nombre }}</h2>
+            {% include "_mensajes.html" %}
+            <p class="txt-s"><strong>Rol:</strong> {{ user.get_rol_display }}</p>
+            <p class="txt-s"><strong>Correo:</strong> {{ user.correo }}</p>
+            {% if user.es_trabajador %}
+                <p class="txt-s"><strong>Verificación de identidad:</strong> {{ user.get_estado_verificacion_display }}</p>
+                {% if not user.esta_verificado %}
+                    <p class="sup-err txt-err br6 fs14 p12 mb15">Tu cuenta está en revisión. Podrás recibir solicitudes cuando se confirme tu identidad.</p>
+                {% endif %}
+            {% endif %}
+            {% if user.is_staff %}
+                <p><a href="{% url 'admin:index' %}" class="btn-hero-secundario">Ir al panel de gestión</a></p>
+            {% endif %}
+            <p class="txt-s fs13">Las pantallas de solicitudes, pagos, mensajes y administración se agregan en las siguientes fases; la barra de arriba se completa sola.</p>
+        </div>
+    </section>
+{% endblock %}

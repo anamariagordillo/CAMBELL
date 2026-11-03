@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block titulo %}Registro - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card maxw560">
+            <h2>Crear cuenta en Cambell</h2>
+
+            {% if form.errors %}
+                <div class="banner-error">
+                    {% if form.hay_duplicado %}Ya existe una cuenta con uno de los datos ingresados.{% else %}Revisa estos datos:{% endif %}
+                    <ul>
+                        {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                        {% for campo in form %}{% for e in campo.errors %}<li>{{ campo.label }}: {{ e }}</li>{% endfor %}{% endfor %}
+                    </ul>
+                    Por seguridad, vuelve a escribir tu contraseña.
+                </div>
+            {% endif %}
+
+            <div class="indicador-pasos">
+                <span class="paso-linea" id="etiquetaPaso">Paso 1 de 3 · Datos básicos</span>
+            </div>
+
+            <form method="post" action="{% url 'usuarios:registro' %}" enctype="multipart/form-data" id="formRegistro">
+                {% csrf_token %}
+
+                <!-- PASO 1: datos básicos -->
+                <div class="paso activo" id="paso1">
+                    <label>Nombre completo</label>
+                    <input type="text" name="nombre" value="{{ form.nombre.value|default_if_none:'' }}" required minlength="3" pattern="[A-Za-zÀ-ÿ\s]+" title="El nombre solo debe contener letras"/>
+                    {% include "usuarios/_errores.html" with campo=form.nombre %}
+
+                    <label>Correo</label>
+                    <input type="email" name="correo" id="correoRegistro" value="{{ form.correo.value|default_if_none:'' }}" required title="Ingresa un correo válido"/>
+                    {% include "usuarios/_errores.html" with campo=form.correo %}
+
+                    <label>Contraseña</label>
+                    <input type="password" name="password" id="pwRegistro" required minlength="8" autocomplete="new-password"
+                           pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*"
+                           title="Debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número"
+                           oninput="validarConfirmacion()"/>
+                    {% include "usuarios/_errores.html" with campo=form.password %}
+                    <small class="txt-s fs11">Mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.</small>
+
+                    <label>Confirmar contraseña</label>
+                    <input type="password" id="confirmPassword" name="confirm_password" required minlength="8" autocomplete="new-password"
+                           title="Repite la contraseña anterior" oninput="validarConfirmacion()"/>
+                    {% include "usuarios/_errores.html" with campo=form.confirm_password %}
+                    <small class="error-campo dnon" id="errorConfirmacion">Las contraseñas no coinciden.</small>
+
+                    <label>Rol</label>
+                    <select name="rol" id="rolSelect" required>
+                        <option value="">Selecciona un rol</option>
+                        <option value="CLIENTE" {% if form.rol.value == 'CLIENTE' %}selected{% endif %}>Cliente</option>
+                        <option value="TRABAJADOR" {% if form.rol.value == 'TRABAJADOR' %}selected{% endif %}>Trabajador</option>
+                        <option value="ALIADO_COMERCIAL" {% if form.rol.value == 'ALIADO_COMERCIAL' %}selected{% endif %}>Aliado comercial</option>
+                    </select>
+                    {% include "usuarios/_errores.html" with campo=form.rol %}
+
+                    <p class="txt-nar fs13 fw700 mt20 mb8">LEGAL Y DATOS PERSONALES</p>
+                    <label class="dflex aci gap8 ftn m0">
+                        <input type="checkbox" class="chk-legal" name="acepta_terminos" value="true" {% if form.acepta_terminos.value %}checked{% endif %}/>
+                        <span>Acepto los <strong>términos y condiciones</strong> de Cambell. (obligatorio)</span>
+                    </label>
+                    {% include "usuarios/_errores.html" with campo=form.acepta_terminos %}
+                    <label class="dflex aci gap8 ftn mt8 m0">
+                        <input type="checkbox" class="chk-legal" name="acepta_datos" value="true" {% if form.acepta_datos.value %}checked{% endif %}/>
+                        <span>Autorizo el <strong>tratamiento de mis datos personales</strong> (habeas data, Ley 1581 de 2012). (obligatorio)</span>
+                    </label>
+                    {% include "usuarios/_errores.html" with campo=form.acepta_datos %}
+
+                    <button type="button" class="btn-hero-principal mt25 w100" onclick="siguientePaso()">Continuar</button>
+                </div>
+
+                <!-- PASO 2: datos según el rol -->
+                <div class="paso" id="paso2">
+
+                    <div class="campo-usuario" id="camposCliente">
+                        <p class="txt-nar fs13 fw700 mb15">TUS DATOS DE CONTACTO</p>
+
+                        <label>Teléfono de contacto</label>
+                        <input type="text" name="telefono" value="{{ form.telefono.value|default_if_none:'' }}" pattern="[0-9]{7,15}" title="Solo números, entre 7 y 15 dígitos" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
+                        {% include "usuarios/_errores.html" with campo=form.telefono %}
+
+                        <label>Localidad principal</label>
+                        <select name="localidad">
+                            <option value="">Selecciona tu localidad</option>
+                            {% for l in localidades %}<option value="{{ l }}" {% if form.localidad.value == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                        </select>
+                        {% include "usuarios/_errores.html" with campo=form.localidad %}
+
+                        <label>Dirección o barrio principal</label>
+                        <input type="text" name="barrio" data-opcional="1" value="{{ form.barrio.value|default_if_none:'' }}" placeholder="Ej. Chapinero Central"/>
+
+                        <label>Foto de perfil (opcional)</label>
+                        <input type="file" name="foto_perfil" accept="image/*"/>
+                        {% include "usuarios/_errores.html" with campo=form.foto_perfil %}
+                    </div>
+
+                    <div class="campo-trabajador" id="camposTrabajadorPerfil">
+                        <p class="txt-nar fs13 fw700 mb15">TU PERFIL PROFESIONAL</p>
+
+                        <label>Oficio / especialidad</label>
+                        <select name="oficio" id="oficioSelect">
+                            <option value="">Selecciona tu oficio</option>
+                            {% for o in oficios %}<option value="{{ o }}" {% if form.oficio.value == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+                        </select>
+                        {% include "usuarios/_errores.html" with campo=form.oficio %}
+
+                        <label>Teléfono / WhatsApp de contacto</label>
+                        <input type="text" name="telefono" value="{{ form.telefono.value|default_if_none:'' }}" pattern="[0-9]{7,15}" title="Solo números, entre 7 y 15 dígitos" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
+                        {% include "usuarios/_errores.html" with campo=form.telefono %}
+
+                        <label>Ciudad o zona de cobertura</label>
+                        <select name="localidad">
+                            <option value="">Selecciona tu zona</option>
+                            {% for l in localidades %}<option value="{{ l }}" {% if form.localidad.value == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                        </select>
+                        {% include "usuarios/_errores.html" with campo=form.localidad %}
+
+                        <label>Barrio (opcional) de cobertura</label>
+                        <input type="text" name="barrio" data-opcional="1" value="{{ form.barrio.value|default_if_none:'' }}" placeholder="Ej. San Martín"/>
+
+                        <label>Años de experiencia</label>
+                        <input type="number" name="anios_experiencia" value="{{ form.anios_experiencia.value|default_if_none:'' }}" min="0" max="60" placeholder="Ej. 5"/>
+                        {% include "usuarios/_errores.html" with campo=form.anios_experiencia %}
+
+                        <label>Tarifa estimada por hora ($, opcional)</label>
+                        <input type="number" name="tarifa_hora" data-opcional="1" value="{{ form.tarifa_hora.value|default_if_none:'' }}" min="0" step="0.01" placeholder="Ej. 35000"/>
+                        {% include "usuarios/_errores.html" with campo=form.tarifa_hora %}
+
+                        <label>Datos para recibir pagos (cuenta bancaria)</label>
+                        <input type="text" name="cuenta_bancaria" value="{{ form.cuenta_bancaria.value|default_if_none:'' }}" placeholder="Ej. Banco de Bogotá · Ahorros · 1234567890"/>
+                        {% include "usuarios/_errores.html" with campo=form.cuenta_bancaria %}
+
+                        <label>Foto de perfil (distinta al documento)</label>
+                        <input type="file" name="foto_perfil" accept="image/*"/>
+                        {% include "usuarios/_errores.html" with campo=form.foto_perfil %}
+
+                        <label>Descripción breve / bio</label>
+                        <textarea name="bio" data-opcional="1" rows="3" class="campo rzv" placeholder="Cuéntanos de tu experiencia, puntualidad, materiales, etc.">{{ form.bio.value|default_if_none:'' }}</textarea>
+                    </div>
+
+                    <div class="campo-aliado" id="camposAliado">
+                        <p class="txt-nar fs13 fw700 mb15">DATOS DE TU EMPRESA</p>
+
+                        <label>Nombre del negocio / razón social</label>
+                        <input type="text" name="razon_social" value="{{ form.razon_social.value|default_if_none:'' }}" placeholder="Ej. Repuestos Bosch Colombia S.A.S."/>
+                        {% include "usuarios/_errores.html" with campo=form.razon_social %}
+
+                        <label>NIT o identificación legal del negocio</label>
+                        <input type="text" name="nit" value="{{ form.nit.value|default_if_none:'' }}" pattern="[0-9]{6,15}" title="Solo números, entre 6 y 15 dígitos" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
+                        {% include "usuarios/_errores.html" with campo=form.nit %}
+
+                        <label>Tipo de aliado</label>
+                        <select name="tipo_aliado">
+                            <option value="">Selecciona un tipo</option>
+                            {% for t in tipos_aliado %}<option value="{{ t }}" {% if form.tipo_aliado.value == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+                        </select>
+                        {% include "usuarios/_errores.html" with campo=form.tipo_aliado %}
+
+                        <label>Teléfono / WhatsApp comercial</label>
+                        <input type="text" name="telefono" value="{{ form.telefono.value|default_if_none:'' }}" pattern="[0-9]{7,15}" title="Solo números, entre 7 y 15 dígitos" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
+                        {% include "usuarios/_errores.html" with campo=form.telefono %}
+
+                        <label>Dirección del negocio</label>
+                        <input type="text" name="direccion_negocio" value="{{ form.direccion_negocio.value|default_if_none:'' }}" placeholder="Ej. Av. Caracas # 45-20, Local 3"/>
+                        {% include "usuarios/_errores.html" with campo=form.direccion_negocio %}
+
+                        <label>Logo o foto del local (opcional)</label>
+                        <input type="file" name="foto_perfil" accept="image/*"/>
+                        {% include "usuarios/_errores.html" with campo=form.foto_perfil %}
+
+                        <label>Descripción breve de lo que ofreces</label>
+                        <textarea name="bio" data-opcional="1" rows="3" class="campo rzv" placeholder="Productos, servicios, descuentos para trabajadores, etc.">{{ form.bio.value|default_if_none:'' }}</textarea>
+                    </div>
+
+                    <div class="dflex jcsb mt25">
+                        <button type="button" class="btn-hero-secundario btn-paso" onclick="pasoAnterior()">Atrás</button>
+                        <button type="button" class="btn-hero-principal btn-paso" id="btnContinuar2" onclick="siguientePaso()">Continuar</button>
+                        <button type="submit" class="btn-hero-principal btn-paso dnon" id="btnRegistrarCliente">Registrarme</button>
+                    </div>
+                </div>
+
+                <!-- PASO 3: verificación (trabajador) o documento legal (aliado) -->
+                <div class="paso" id="paso3">
+
+                    <div class="campo-trabajador-verif" id="camposVerifTrabajador">
+                        <p class="txt-nar fs13 fw700 mb15">VERIFICACIÓN DE IDENTIDAD</p>
+
+                        <label>Número de documento</label>
+                        <input type="text" name="numero_documento" value="{{ form.numero_documento.value|default_if_none:'' }}" pattern="[0-9]{6,15}" title="Solo números, entre 6 y 15 dígitos" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
+                        {% include "usuarios/_errores.html" with campo=form.numero_documento %}
+
+                        <label>Foto del documento (frente)</label>
+                        <input type="file" name="documento" id="documentoFile" accept="image/*"/>
+                        {% include "usuarios/_errores.html" with campo=form.documento %}
+
+                        <label>Selfie de verificación</label>
+                        <input type="file" name="selfie" id="selfieFile" accept="image/*"/>
+                        {% include "usuarios/_errores.html" with campo=form.selfie %}
+
+                        <p class="txt-s fs12 mt10">Tu cuenta quedará en revisión hasta confirmar tu identidad.</p>
+                    </div>
+
+                    <div class="campo-aliado-verif" id="camposVerifAliado">
+                        <p class="txt-nar fs13 fw700 mb15">DOCUMENTO LEGAL DEL NEGOCIO</p>
+
+                        <label>RUT o cámara de comercio</label>
+                        <input type="file" name="documento_legal" id="documentoLegalFile" accept="image/*,application/pdf"/>
+                        {% include "usuarios/_errores.html" with campo=form.documento_legal %}
+
+                        <p class="txt-s fs12 mt10">Documento que acredita tu negocio. No se pide documento personal ni selfie.</p>
+                    </div>
+
+                    <div class="dflex jcsb mt25">
+                        <button type="button" class="btn-hero-secundario btn-paso" onclick="pasoAnterior()">Atrás</button>
+                        <button type="submit" class="btn-hero-principal btn-paso" id="btnRegistrar">Registrarme</button>
+                    </div>
+                </div>
+            </form>
+
+            <p class="auth-link">¿Ya tienes cuenta? <a href="{% url 'usuarios:login' %}">Inicia sesión aquí</a></p>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var CONTENEDORES = ['camposCliente', 'camposTrabajadorPerfil', 'camposAliado', 'camposVerifTrabajador', 'camposVerifAliado'];
+
+    function rolActual() { return document.getElementById('rolSelect').value; }
+    function esTrabajador() { return rolActual() === 'TRABAJADOR'; }
+    function esAliado() { return rolActual() === 'ALIADO_COMERCIAL'; }
+    function esCliente() { return rolActual() === 'CLIENTE'; }
+
+    function etiquetaPaso2() {
+        return esTrabajador() ? 'Tu perfil profesional'
+            : esAliado() ? 'Datos de tu empresa' : 'Tus datos y ubicación';
+    }
+    function totalPasos() { return esCliente() ? 2 : 3; }
+
+    function validarConfirmacion() {
+        var pw = document.getElementById('pwRegistro');
+        var cp = document.getElementById('confirmPassword');
+        var err = document.getElementById('errorConfirmacion');
+        if (!pw.value || !cp.value) { err.classList.add('dnon'); return; }
+        if (pw.value !== cp.value) err.classList.remove('dnon');
+        else err.classList.add('dnon');
+    }
+
+    // Activa (o desactiva) los campos de un bloque. Los campos desactivados no se envían,
+    // así el teléfono o la localidad solo viajan desde el bloque del rol elegido.
+    // Los marcados con data-opcional nunca se vuelven obligatorios.
+    function setRequeridos(contenedorId, activo) {
+        var cont = document.getElementById(contenedorId);
+        if (!cont) return;
+        var campos = cont.querySelectorAll('input, select, textarea');
+        for (var i = 0; i < campos.length; i++) {
+            var c = campos[i];
+            if (c.type === 'file') continue;
+            c.disabled = !activo;
+            if (activo && !c.hasAttribute('data-opcional')) c.setAttribute('required', 'true');
+            else c.removeAttribute('required');
+        }
+    }
+
+    function aplicarRol() {
+        document.getElementById('camposCliente').classList.toggle('visible', esCliente());
+        document.getElementById('camposTrabajadorPerfil').classList.toggle('visible', esTrabajador());
+        document.getElementById('camposAliado').classList.toggle('visible', esAliado());
+        document.getElementById('camposVerifTrabajador').classList.toggle('visible', esTrabajador());
+        document.getElementById('camposVerifAliado').classList.toggle('visible', esAliado());
+        document.getElementById('btnContinuar2').classList.toggle('dnon', esCliente());
+        document.getElementById('btnRegistrarCliente').classList.toggle('dnon', !esCliente());
+        setRequeridos('camposCliente', esCliente());
+        setRequeridos('camposTrabajadorPerfil', esTrabajador());
+        setRequeridos('camposAliado', esAliado());
+        setRequeridos('camposVerifTrabajador', esTrabajador());
+        setRequeridos('camposVerifAliado', esAliado());
+    }
+
+    function siguientePaso() {
+        var pasoActual = document.querySelector('.paso.activo');
+        var camposPaso = pasoActual.querySelectorAll('input, select, textarea');
+        for (var i = 0; i < camposPaso.length; i++) {
+            var campo = camposPaso[i];
+            if (campo.disabled || campo.type === 'file') continue;
+            if (!campo.checkValidity()) { campo.reportValidity(); return; }
+        }
+
+        if (pasoActual.id === 'paso1') {
+            var pw = document.getElementById('pwRegistro');
+            var cp = document.getElementById('confirmPassword');
+            if (pw.value !== cp.value) {
+                document.getElementById('errorConfirmacion').classList.remove('dnon');
+                cp.reportValidity();
+                return;
+            }
+            if (!rolActual()) { alert('Selecciona un rol para continuar.'); return; }
+            aplicarRol();
+            document.getElementById('paso1').classList.remove('activo');
+            document.getElementById('paso2').classList.add('activo');
+            document.getElementById('etiquetaPaso').textContent =
+                'Paso 2 de ' + totalPasos() + ' · ' + etiquetaPaso2();
+        } else if (pasoActual.id === 'paso2' && !esCliente()) {
+            document.getElementById('paso2').classList.remove('activo');
+            document.getElementById('paso3').classList.add('activo');
+            document.getElementById('etiquetaPaso').textContent =
+                'Paso 3 de 3 · ' + (esTrabajador() ? 'Verificación de identidad' : 'Documento legal del negocio');
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function pasoAnterior() {
+        var actual = document.querySelector('.paso.activo').id;
+        if (actual === 'paso3') {
+            document.getElementById('paso3').classList.remove('activo');
+            document.getElementById('paso2').classList.add('activo');
+            document.getElementById('etiquetaPaso').textContent =
+                'Paso 2 de ' + totalPasos() + ' · ' + etiquetaPaso2();
+        } else {
+            document.getElementById('paso2').classList.remove('activo');
+            document.getElementById('paso1').classList.add('activo');
+            document.getElementById('etiquetaPaso').textContent =
+                'Paso 1 de ' + totalPasos() + ' · Datos básicos';
+            CONTENEDORES.forEach(function (id) { setRequeridos(id, false); });
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Al cargar: los bloques de los pasos 2 y 3 no deben bloquear el envío ni viajar en el formulario.
+    // Si el servidor devolvió errores, se vuelve al paso 1 (la contraseña hay que escribirla de nuevo).
+    window.addEventListener('DOMContentLoaded', function () {
+        CONTENEDORES.forEach(function (id) { setRequeridos(id, false); });
+        var sel = document.getElementById('rolSelect');
+        if (sel && sel.value) {
+            document.getElementById('etiquetaPaso').textContent = 'Paso 1 de ' + totalPasos() + ' · Datos básicos';
+        }
+    });
+</script>
+{% endblock %}

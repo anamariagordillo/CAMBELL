@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mis trabajos - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p60">
+        <h2 class="mb30">Mis trabajos</h2>
+
+        <div class="filtros mb20">
+            <span class="filtros-label">Filtrar:</span>
+            <a href="{% url 'solicitudes:mis_trabajos' %}" class="filtro-chip {% if filtro_actual == 'en-curso' %}activo{% endif %}">En curso</a>
+            <a href="?estado=completadas" class="filtro-chip {% if filtro_actual == 'completadas' %}activo{% endif %}">Completados</a>
+            <a href="?estado=canceladas" class="filtro-chip {% if filtro_actual == 'canceladas' %}activo{% endif %}">Cancelados</a>
+            <a href="?estado=todas" class="filtro-chip {% if filtro_actual == 'todas' %}activo{% endif %}">Todos</a>
+        </div>
+        <p class="txt-s fs13 mb15">Ordenados del más reciente al más antiguo.</p>
+
+        {% include "_mensajes.html" %}
+
+        {% url 'verificacion:actualizar_documento' as url_actualizar_doc %}
+        {% if url_actualizar_doc %}
+            <form method="post" action="{{ url_actualizar_doc }}" enctype="multipart/form-data" class="doc-vencido-box">
+                {% csrf_token %}
+                <strong>¿Tu documento está vencido?</strong>
+                <p class="fs13 mt6 mb10">Sube una foto del documento renovado. Quedará pendiente de verificación.</p>
+                <input type="file" name="documento" accept="image/*" required class="input-archivo"/>
+                <br/>
+                <button type="submit" class="btn-hero-secundario wauto">Actualizar documento</button>
+            </form>
+        {% endif %}
+
+        {% for s in trabajos %}
+            <div class="trabajo-card">
+                <p><strong>{{ s.descripcion }}</strong></p>
+                <p>Localidad: <span>{{ s.localidad }}</span> &nbsp;·&nbsp; Barrio: <span>{{ s.barrio }}</span></p>
+                <p>Cliente: <span>{{ s.cliente.nombre }}</span></p>
+                <p>Estado: <span>{{ s.get_estado_display }}</span></p>
+
+                {% if s.estado == 'COMPLETADA' %}<p class="txt-ok fs13">Trabajo completado ✓</p>{% endif %}
+                {% if s.estado == 'CANCELADA' %}<p class="txt-err fs13">Trabajo cancelado</p>{% endif %}
+
+                {% if s.estado == 'ACEPTADA' %}
+                    <div>
+                        <div class="ubicacion-caja" data-id="{{ s.id }}">
+                            <p class="fs12 m0b8">Ubicación del trabajo</p>
+                            <p class="m0b10"><span>Zona aproximada: {{ s.zona }}</span></p>
+                            <button type="button" class="btn-hero-principal reveal-btn wauto" onclick="revelarUbicacion(this)">Iniciar viaje y ver punto exacto</button>
+                            <div class="oculto reveal-caja">
+                                <p class="fs12 m1204 txt-nar">
+                                    Ubicación exacta visible por <strong class="temporizador">30:00</strong> min
+                                </p>
+                                {% if s.direccion_especifica %}
+                                    <p class="fs13 m2t0 fw600">Dirección: {{ s.direccion_especifica }}</p>
+                                {% endif %}
+                                <a class="btn-hero-principal reveal-enlace dib mt6 wauto" target="_blank" rel="noopener">
+                                    Verificar en el mapa (Waze)
+                                </a>
+                            </div>
+                        </div>
+
+                        {% url 'solicitudes:finalizar' s.id as url_finalizar %}
+                        {% if url_finalizar %}
+                            <form method="post" action="{{ url_finalizar }}" enctype="multipart/form-data" class="sep pt15 mt15">
+                                {% csrf_token %}
+                                <label>Foto del trabajo terminado (obligatoria)</label>
+                                <input type="file" name="evidencia" accept="image/*" required class="dblk mb12"/><br/>
+                                <label>Código de finalización (proporcionado por el cliente)</label>
+                                <input type="text" name="codigo" required maxlength="6" placeholder="XXXXXX" class="input-codigo"/>
+                                <p class="fs12">Pide este código al cliente para poder finalizar el trabajo.</p><br/>
+                                <button type="submit" class="btn-hero-principal wauto">Finalizar trabajo</button>
+                            </form>
+                        {% endif %}
+
+                        {% url 'mensajeria:chat' s.id as url_chat %}
+                        {% if url_chat %}
+                            <a href="{{ url_chat }}" class="btn-hero-secundario dib tdn mt10 wauto">Chat con el cliente</a>
+                        {% endif %}
+
+                        {% url 'seguridad:reportar' s.id as url_reportar %}
+                        {% if url_reportar %}
+                            <a href="{{ url_reportar }}" class="enlace-reportar">Reportar cliente</a>
+                        {% endif %}
+
+                        <form method="post" action="{% url 'solicitudes:liberar' s.id %}" class="dinl ml8"
+                              onsubmit="return confirm('¿Liberar este trabajo? Volverá a quedar disponible para otros trabajadores.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-hero-secundario btn-liberar"
+                                    title="Libera este trabajo para que se reasigne a otro trabajador compatible">Liberar y reasignar</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="no-solicitudes">No tienes trabajos para el filtro seleccionado.</p>
+        {% endfor %}
+    </section>
+
+    {{ puntos_exactos|json_script:"puntos-exactos" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var puntosExactos = JSON.parse(document.getElementById('puntos-exactos').textContent);
+    var temporizadores = {};
+
+    function revelarUbicacion(boton) {
+        var caja = boton.closest('.ubicacion-caja');
+        var id = caja.getAttribute('data-id');
+        var punto = puntosExactos[id];
+        if (!punto || !punto.lat || !punto.lon) {
+            alert('El cliente aún no registró el punto exacto en el mapa.');
+            return;
+        }
+        var enlace = caja.querySelector('.reveal-enlace');
+        enlace.href = 'https://waze.com/ul?ll=' + punto.lat + ',' + punto.lon + '&navigate=yes';
+        caja.querySelector('.reveal-caja').classList.remove('oculto');
+        boton.classList.add('oculto');
+        iniciarTemporizador(caja);
+    }
+
+    // El punto exacto solo queda visible 30 minutos; luego hay que pedirlo de nuevo.
+    function iniciarTemporizador(caja) {
+        var segundosTotales = 30 * 60;
+        var id = caja.getAttribute('data-id');
+        var ref = caja.querySelector('.temporizador');
+        temporizadores[id] = setInterval(function () {
+            segundosTotales--;
+            if (segundosTotales <= 0) {
+                clearInterval(temporizadores[id]);
+                caja.querySelector('.reveal-caja').classList.add('oculto');
+                caja.querySelector('.reveal-btn').classList.remove('oculto');
+                alert('El punto exacto ya no está disponible. Pulsa el botón de nuevo para volver a verlo.');
+                return;
+            }
+            var m = Math.floor(segundosTotales / 60);
+            var s = Math.floor(segundosTotales % 60);
+            ref.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        }, 1000);
+    }
+</script>
+{% endblock %}

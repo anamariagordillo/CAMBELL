@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block titulo %}Historial de trabajos - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p60">
+        <h2 class="mb30">Historial de trabajos</h2>
+
+        {% for s in historial %}
+            <div class="sup br8 p20 mb15">
+                <p><strong>{{ s.descripcion }}</strong></p>
+                <p>Cliente: <span>{{ s.cliente.nombre }}</span> &nbsp;·&nbsp; Localidad: <span>{{ s.localidad }}</span></p>
+                <p>
+                    <span class="br10 fs12 fw600 p2x10 {% if s.estado == 'COMPLETADA' %}estado-ok{% else %}estado-pendiente{% endif %}">{{ s.get_estado_display }}</span>
+                </p>
+                {% if s.calificacion %}
+                    <p>
+                        Calificación: <span class="txt-amb">{{ s.calificacion }} / 5 ★</span>
+                        {% if s.comentario %}<span class="txt-s fs13"> — {{ s.comentario }}</span>{% endif %}
+                    </p>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>Aún no tienes trabajos en tu historial.</p>
+        {% endfor %}
+
+        <a href="{% url 'solicitudes:mis_trabajos' %}" class="btn-hero-secundario dib mt15 wauto">Volver a mis trabajos</a>
+    </section>
+{% endblock %}

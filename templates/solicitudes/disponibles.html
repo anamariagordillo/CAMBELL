@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block titulo %}Solicitudes disponibles - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p60">
+        <h2 class="mb30">Solicitudes disponibles</h2>
+
+        {% include "_mensajes.html" %}
+
+        <div class="caja-filtros">
+            <form method="get" action="{% url 'solicitudes:disponibles' %}">
+                <table class="filtro-tabla">
+                    <tr>
+                        <td class="w25">
+                            <label>Localidad</label>
+                            <select name="localidad" id="fLocalidad">
+                                <option value="">Todas</option>
+                                {% for nombre in localidades %}
+                                    <option value="{{ nombre }}" {% if nombre == filtros.localidad %}selected{% endif %}>{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Barrio</label>
+                            <select name="barrio" id="fBarrio" data-seleccionado="{{ filtros.barrio }}">
+                                <option value="">Todos</option>
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Categoría</label>
+                            <select name="categoria">
+                                <option value="">Todas</option>
+                                {% for valor, etiqueta in categorias %}
+                                    <option value="{{ valor }}" {% if valor == filtros.categoria %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Precio ofertado</label>
+                            <div class="dflex gap6">
+                                <input type="number" name="precio_min" placeholder="Mín" step="0.01" value="{{ filtros.precio_min }}"/>
+                                <input type="number" name="precio_max" placeholder="Máx" step="0.01" value="{{ filtros.precio_max }}"/>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="w25">
+                            <label>Ordenar por fecha</label>
+                            <select name="orden" id="fOrden">
+                                <option value="recientes" {% if filtros.orden == 'recientes' %}selected{% endif %}>Más recientes primero</option>
+                                <option value="antiguas" {% if filtros.orden == 'antiguas' %}selected{% endif %}>Más antiguas primero</option>
+                            </select>
+                        </td>
+                        <td colspan="3" class="filtro-fecha-ayuda">
+                            <p class="txt-s fs12 m0">Combina este orden con los filtros de localidad, categoría y precio.</p>
+                        </td>
+                    </tr>
+                </table>
+                <button type="submit" class="btn-hero-principal dib wauto">Filtrar</button>
+                <a href="{% url 'solicitudes:disponibles' %}" class="txt-nar ml10">Limpiar filtros</a>
+            </form>
+        </div>
+
+        {% for s in solicitudes %}
+            <div class="sup br8 p20 mb15">
+                <p>
+                    <strong>{{ s.descripcion }}</strong>
+                    <span class="categoria-badge">{{ s.get_categoria_display }}</span>
+                    {% if s.id in compatibles %}
+                        <span class="dib sup-ok txt-ok br20 fs12 p3x10 ml8">✓ Compatible con tu cobertura</span>
+                    {% endif %}
+                </p>
+                <p>Localidad: <span>{{ s.localidad }}</span> &nbsp;·&nbsp; Barrio: <span>{{ s.barrio }}</span></p>
+                <p>Publicada: <span class="txt-s">{{ s.fecha_creacion|date:"d/m/Y • H:i" }}</span></p>
+                {% if s.precio_ofertado %}
+                    <p>Precio ofertado: <strong class="txt-nar">$ {{ s.precio_ofertado|floatformat:"0g" }}</strong></p>
+                {% endif %}
+                <p>Cliente: <span>{{ s.cliente.nombre }}</span></p>
+
+                <form method="post" action="{% url 'solicitudes:aceptar' s.id %}" class="dib mr10">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-hero-principal wauto">Aceptar</button>
+                </form>
+
+                <form method="post" action="{% url 'solicitudes:rechazar' s.id %}" class="dib"
+                      onsubmit="var m=this.motivo.value; if(!m || m.trim()===''){alert('Debes indicar el motivo del rechazo.'); return false;} return confirm('¿Rechazar esta solicitud?');">
+                    {% csrf_token %}
+                    <input type="text" name="motivo" placeholder="Motivo del rechazo" required class="campo txt-p mr6 w260"/>
+                    <button type="submit" class="btn-hero-secundario wauto">Rechazar</button>
+                </form>
+            </div>
+        {% empty %}
+            <p>No hay solicitudes disponibles con esos criterios.</p>
+        {% endfor %}
+    </section>
+
+    {{ localidades_json|json_script:"datos-localidades" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var localidadesData = JSON.parse(document.getElementById('datos-localidades').textContent);
+    var fLocalidad = document.getElementById('fLocalidad');
+    var fBarrio = document.getElementById('fBarrio');
+    var SELECTED_BARRIO = fBarrio.getAttribute('data-seleccionado');
+
+    // Al elegir una localidad, la lista de barrios se llena con los de esa localidad
+    function poblarBarriosFiltro() {
+        var localidad = fLocalidad.value;
+        fBarrio.innerHTML = '';
+        var def = document.createElement('option');
+        def.value = '';
+        def.textContent = 'Todos';
+        fBarrio.appendChild(def);
+        if (!localidad) return;
+
+        var ref = localidadesData.find(function (l) { return l.localidad === localidad; });
+        if (!ref) return;
+        ref.barrios.forEach(function (b) {
+            var op = document.createElement('option');
+            op.value = b.nombre;
+            op.textContent = b.nombre;
+            if (SELECTED_BARRIO === b.nombre) { op.selected = true; }
+            fBarrio.appendChild(op);
+        });
+    }
+
+    fLocalidad.addEventListener('change', function () {
+        SELECTED_BARRIO = '';
+        poblarBarriosFiltro();
+    });
+    window.addEventListener('DOMContentLoaded', poblarBarriosFiltro);
+</script>
+{% endblock %}

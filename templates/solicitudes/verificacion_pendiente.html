@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block titulo %}Cuenta en revisión - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="tac p8040">
+        <h2>Tu cuenta está en revisión</h2>
+        <p class="txt-s mt15">Un administrador está validando tu identidad. Te notificaremos cuando puedas empezar a recibir solicitudes.</p>
+
+        {% if user.estado_verificacion == 'RECHAZADO' %}
+            <div class="sup br8 tal p24 mt40 mxa maxw560">
+                <h3 class="txt-err m0b8">Tu verificación fue rechazada</h3>
+                <p class="txt-s fs14">El documento o la selfie no pudieron validarse. Revisa que el número de documento sea correcto y que la selfie sea clara, luego vuelve a intentarlo.</p>
+
+                {% url 'verificacion:reintentar' as url_reintentar %}
+                {% if url_reintentar %}
+                    <form method="post" action="{{ url_reintentar }}" enctype="multipart/form-data" class="mt15">
+                        {% csrf_token %}
+                        <label class="dblk txt-s fs13 m1204">Foto de tu documento (nueva)</label>
+                        <input type="file" name="documento" accept="image/*" required class="campo txt-p p10 w100"/>
+                        <label class="dblk txt-s fs13 m1204">Selfie de verificación (nueva)</label>
+                        <input type="file" name="selfie" accept="image/*" required class="campo txt-p p10 w100"/>
+                        <button type="submit" class="btn-hero-principal mt18 wauto">Reintentar verificación</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

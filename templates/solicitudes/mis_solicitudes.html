@@ -78,6 +78,24 @@
                     </form>
                 {% endif %}
 
+                {% if s.estado == 'COMPLETADA' and s.calificacion is None %}
+                    <div class="sep pt15 mt15">
+                        <form method="post" action="{% url 'solicitudes:calificar' s.id %}">
+                            {% csrf_token %}
+                            <label>Califica este servicio:</label>
+                            <select name="puntuacion" required class="campo txt-p">
+                                <option value="5">★★★★★ Excelente</option>
+                                <option value="4">★★★★ Muy bueno</option>
+                                <option value="3">★★★ Bueno</option>
+                                <option value="2">★★ Regular</option>
+                                <option value="1">★ Malo</option>
+                            </select><br/><br/>
+                            <input type="text" name="comentario" maxlength="500" placeholder="Comentario (opcional)" class="campo txt-p p10 w100"/><br/><br/>
+                            <button type="submit" class="btn-hero-principal dib wauto">Enviar calificación</button>
+                        </form>
+                    </div>
+                {% endif %}
+
                 {% if s.calificacion %}
                     <div class="sep pt15 mt15">
                         <p>Tu calificación: <span>{{ "★★★★★"|slice:s.calificacion }}</span></p>

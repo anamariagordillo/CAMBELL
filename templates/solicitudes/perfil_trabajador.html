@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block titulo %}Perfil del trabajador - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card">
+            <h2>Perfil del trabajador</h2>
+
+            <div class="fila-dato">
+                <label>Nombre</label>
+                <span>{{ trabajador.nombre }}</span>
+                {% if premium_activo %}<span class="badge badge-activo">Aliado de confianza</span>{% endif %}
+            </div>
+
+            <div class="fila-dato">
+                <label>Calificación promedio</label>
+                <span>
+                    {% if trabajador.calificacion_promedio > 0 %}
+                        <span class="estrella">{{ trabajador.calificacion_promedio|floatformat:1 }} ★</span>
+                    {% else %}
+                        Sin calificaciones aún
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="fila-dato">
+                <label>Trabajos completados</label>
+                <span>{{ trabajos_realizados }} servicios</span>
+            </div>
+
+            <div class="mt20">
+                <a href="{% url 'solicitudes:mis_solicitudes' %}" class="btn-hero-secundario wauto">Volver a mis solicitudes</a>
+            </div>
+        </div>
+    </section>
+{% endblock %}

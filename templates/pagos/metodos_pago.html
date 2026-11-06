@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mis métodos de pago - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw760 mxa">
+        <h2>Mis métodos de pago</h2>
+
+        {% include "_mensajes.html" %}
+
+        {% for m in metodos %}
+            <div class="sup br8 p1620 mb10">
+                <div class="dflex afs jcsb">
+                    <div>
+                        <p class="fw600 m0">{{ m.titular }}</p>
+                        <p class="txt-s m4t0">{{ m.get_tipo_display }} · {{ m.numero_enmascarado }}</p>
+                        {% if m.tipo == 'TARJETA' and m.mes_vencimiento and m.anio_vencimiento %}
+                            <p class="txt-s fs12 m2t0">{{ m.mes_vencimiento }}/{{ m.anio_vencimiento }}</p>
+                        {% endif %}
+                    </div>
+                    <span class="txt-ok fs12">Registrado</span>
+                </div>
+
+                <details class="sep pt10 mt10">
+                    <summary class="txt-nar fs14 curp">Editar</summary>
+                    <form method="post" action="{% url 'pagos:editar_metodo' m.id %}" class="mt10">
+                        {% csrf_token %}
+                        <label>Titular</label>
+                        <input type="text" name="titular" value="{{ m.titular }}" required maxlength="100" class="campo txt-p mb8 w100"/>
+                        {% if m.tipo == 'TARJETA' %}
+                            <div class="dflex gap8 mb8">
+                                <div class="flex1">
+                                    <label>Mes</label>
+                                    <input type="number" name="mes_vencimiento" min="1" max="12" value="{{ m.mes_vencimiento|default_if_none:'' }}" required class="campo txt-p w100"/>
+                                </div>
+                                <div class="flex1">
+                                    <label>Año</label>
+                                    <input type="number" name="anio_vencimiento" min="{{ anio_minimo }}" max="2099" value="{{ m.anio_vencimiento|default_if_none:'' }}" required class="campo txt-p w100"/>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <button type="submit" class="btn-hero-principal dib wauto">Guardar cambios</button>
+                    </form>
+                </details>
+
+                <form method="post" action="{% url 'pagos:eliminar_metodo' m.id %}"
+                      onsubmit="return confirm('¿Eliminar este método de pago?');" class="mt8">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-hero-secundario sup-err bdr-err wauto">Eliminar</button>
+                </form>
+            </div>
+        {% empty %}
+            <p class="txt-s">Aún no tienes métodos de pago registrados.</p>
+        {% endfor %}
+
+        <div class="sup br8 p20 mt20">
+            <h3>Agregar método de pago</h3>
+            <form method="post" action="{% url 'pagos:metodos' %}" id="formAgregar" autocomplete="off">
+                {% csrf_token %}
+                <label>Tipo</label>
+                <select name="tipo" required id="selectTipo" class="campo txt-p p10 mb10 w100">
+                    {% for valor, etiqueta in tipos %}
+                        <option value="{{ valor }}">{{ etiqueta }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Titular</label>
+                <input type="text" name="titular" required maxlength="100" placeholder="Nombre del titular" class="campo txt-p p10 mb10 w100"/>
+
+                <label>Número (solo se guardan los últimos 4 dígitos)</label>
+                <input type="text" name="numero" required placeholder="#### #### #### ####" maxlength="19" inputmode="numeric" autocomplete="off" class="campo txt-p p10 mb10 w100"/>
+
+                <div id="camposVencimiento" class="dnon">
+                    <div class="dflex gap8 mb10">
+                        <div class="flex1">
+                            <label>Mes de vencimiento</label>
+                            <input type="number" name="mes_vencimiento" min="1" max="12" placeholder="MM" class="campo txt-p p10 w100"/>
+                        </div>
+                        <div class="flex1">
+                            <label>Año de vencimiento</label>
+                            <input type="number" name="anio_vencimiento" min="{{ anio_minimo }}" max="2099" placeholder="YYYY" class="campo txt-p p10 w100"/>
+                        </div>
+                    </div>
+                    <small class="dblk txt-s mb10">Si la tarjeta está vencida no podrás usarla para pagar.</small>
+                </div>
+
+                <button type="submit" class="btn-hero-principal dib wauto">Guardar método de pago</button>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var selectTipo = document.getElementById('selectTipo');
+    var camposVenc = document.getElementById('camposVencimiento');
+
+    // Solo las tarjetas tienen fecha de vencimiento.
+    function actualizarVencimiento() {
+        var esTarjeta = selectTipo.value === 'TARJETA';
+        camposVenc.style.display = esTarjeta ? 'block' : 'none';
+        camposVenc.querySelectorAll('input').forEach(function (i) {
+            if (esTarjeta) {
+                i.setAttribute('required', 'true');
+            } else {
+                i.removeAttribute('required');
+                i.value = '';
+            }
+        });
+    }
+    selectTipo.addEventListener('change', actualizarVencimiento);
+    window.addEventListener('DOMContentLoaded', actualizarVencimiento);
+</script>
+{% endblock %}

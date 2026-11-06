@@ -11,6 +11,7 @@ admin.site.index_title = "Panel de gestión"
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("solicitudes/", include("solicitudes.urls")),
+    path("pagos/", include("pagos.urls")),
     path("", include("usuarios.urls")),
 ]
 

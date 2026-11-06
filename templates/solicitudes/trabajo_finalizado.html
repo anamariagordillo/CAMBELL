@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block titulo %}Trabajo finalizado - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p60 maxw640 mxa">
+        <div class="sup br8 p25 mt25">
+            <h2 class="m0">Trabajo finalizado</h2>
+            <p class="txt-s mt6">{{ solicitud.descripcion }}</p>
+        </div>
+
+        {% if solicitud.pago and solicitud.pago.estado == 'COMPLETADO' %}
+            <div class="sup-ok txt-ok br8 p20 mb20 mt20">
+                <p class="fw600 m0">Pago recibido</p>
+                <p class="m6t0">
+                    El cliente ya pagó este servicio.
+                    {% url 'pagos:ingresos' as url_ingresos %}
+                    {% if url_ingresos %}El neto aparece en <a href="{{ url_ingresos }}" class="txt-nar tdn">Mis ingresos</a>.{% endif %}
+                </p>
+                {% url 'pagos:comprobante' solicitud.pago.id as url_comprobante %}
+                {% if url_comprobante %}
+                    <a href="{{ url_comprobante }}" class="btn-hero-principal dib mt15 wauto">Ver comprobante</a>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="sup-ok txt-ok br8 p20 mb20 mt20">
+                <p class="fw600 m0">El trabajo ha sido finalizado</p>
+                <p class="m6t0">
+                    Espera por el pago del cliente
+                    {% if solicitud.metodo_pago %}
+                        con el método {{ solicitud.metodo_pago.get_tipo_display }} · {{ solicitud.metodo_pago.numero_enmascarado }} elegido al crear la solicitud.
+                    {% else %}
+                        con el método de pago que fue especificado.
+                    {% endif %}
+                </p>
+                <p class="txt-s m6t0">En cuanto el pago sea aprobado, este mensaje cambia a "Pago recibido".</p>
+            </div>
+        {% endif %}
+
+        <div class="dflex fww gap10">
+            <a href="{% url 'solicitudes:mis_trabajos' %}" class="btn-hero-principal dib tdn wauto">Ver mis trabajos en curso</a>
+            <a href="{% url 'solicitudes:historial_trabajos' %}" class="btn-hero-secundario dib tdn wauto">Historial</a>
+        </div>
+    </section>
+{% endblock %}

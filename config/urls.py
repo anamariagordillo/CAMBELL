@@ -13,6 +13,12 @@ urlpatterns = [
     path("solicitudes/", include("solicitudes.urls")),
     path("pagos/", include("pagos.urls")),
     path("admin/", include("panel_admin.urls")),
+    path("anuncios/", include("anuncios.urls")),
+    path("verificacion/", include("usuarios.urls_verificacion")),
+    # Chat y notificaciones conservan las rutas de Java (/solicitudes/{id}/mensajes,
+    # /notificaciones) y los reportes usan /solicitudes/{id}/reportar.
+    path("", include("mensajeria.urls")),
+    path("", include("seguridad.urls")),
     path("", include("usuarios.urls")),
 ]
 

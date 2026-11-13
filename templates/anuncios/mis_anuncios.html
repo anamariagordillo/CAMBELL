@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mis anuncios - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p60 maxw900 mxa">
+        <div class="dflex aci jcsb mb30">
+            <h2 class="m0">Mis anuncios</h2>
+            <a href="{% url 'anuncios:nuevo' %}" class="btn-hero-principal tdn wauto">+ Publicar anuncio</a>
+        </div>
+
+        {% include "_mensajes.html" %}
+
+        {% for a in anuncios %}
+            <div class="sup br8 p20 mb15">
+                <p><strong>{{ a.titulo }}</strong></p>
+                {% if a.imagen %}
+                    <img src="{{ a.imagen.url }}" class="br6 my10" style="max-width: 180px;" alt="{{ a.titulo }}"/>
+                {% endif %}
+                <p class="txt-s">{{ a.descripcion }}</p>
+                <p>
+                    Estado:
+                    {% if a.estado == 'PUBLICADO' %}
+                        <span class="sup-ok txt-ok br10 fw700 p2x10">Publicado</span>
+                    {% elif a.estado == 'RECHAZADO' %}
+                        <span class="sup-err txt-err br10 fw700 p2x10">Rechazado</span>
+                    {% else %}
+                        <span class="sup-amb txt-amb br10 fw700 p2x10">Pendiente de revisión</span>
+                    {% endif %}
+                </p>
+                {% if a.motivo_rechazo %}
+                    <p class="txt-err">Motivo del rechazo: {{ a.motivo_rechazo }}</p>
+                {% endif %}
+
+                <div class="dflex fww aci gap10 mt10">
+                    <a href="{% url 'anuncios:editar' a.id %}" class="btn-hero-secundario dib tdn wauto">Editar</a>
+                    <form method="post" action="{% url 'anuncios:eliminar' a.id %}" class="dinl m0"
+                          onsubmit="return confirm('¿Seguro que quieres eliminar este anuncio?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-hero-secundario sup-err bdr-err wauto">Eliminar</button>
+                    </form>
+                </div>
+                {% if a.estado == 'PUBLICADO' or a.estado == 'RECHAZADO' %}
+                    <p class="txt-s fs12 mt5">
+                        Si editas este anuncio volverá a <strong>revisión</strong>.
+                    </p>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>Aún no has publicado anuncios.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

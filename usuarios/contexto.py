@@ -74,7 +74,13 @@ def navegacion(request):
         items = NAV_ADMIN
     elif rol == Rol.TRABAJADOR:
         aprobado = usuario.estado_verificacion == EstadoVerificacion.APROBADO
-        items = NAV_TRABAJADOR_APROBADO if aprobado else NAV_TRABAJADOR_SIN_APROBAR
+        if aprobado:
+            items = NAV_TRABAJADOR_APROBADO
+        else:
+            items = NAV_TRABAJADOR_SIN_APROBAR
+            # Solo se ofrece reintentar cuando un administrador ya rechazó el intento.
+            if usuario.estado_verificacion == EstadoVerificacion.RECHAZADO:
+                items = [("Reintentar verificación", "verificacion:reintentar")] + items
     elif rol == Rol.CLIENTE:
         items = NAV_CLIENTE
     else:

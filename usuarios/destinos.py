@@ -16,7 +16,7 @@ PANEL = "usuarios:panel"
 DESTINO_POR_ROL = {
     Rol.TRABAJADOR: "solicitudes:disponibles",
     Rol.CLIENTE: "solicitudes:nueva",
-    Rol.ALIADO_COMERCIAL: PANEL,  # fase 5: "anuncios:mios"
+    Rol.ALIADO_COMERCIAL: "anuncios:mios",
     Rol.ADMINISTRADOR: "panel_admin:verificaciones",
 }
 

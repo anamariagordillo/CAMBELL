@@ -56,6 +56,10 @@
                     <label for="{{ form.password.id_for_label }}">Contraseña</label>
                     {{ form.password }}
 
+                    <p class="auth-link ta-r">
+                        <a href="{% url 'usuarios:recuperar_password' %}">¿Olvidaste tu contraseña?</a>
+                    </p>
+
                     <button type="submit" class="btn-hero-principal">Ingresar</button>
                 </form>
                 <p class="auth-link">¿No tienes cuenta? <a href="{% url 'usuarios:registro' %}">Regístrate aquí</a></p>

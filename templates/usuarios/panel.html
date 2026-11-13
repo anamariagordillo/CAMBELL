@@ -18,6 +18,15 @@
             {% if user.is_staff %}
                 <p><a href="{% url 'admin:index' %}" class="btn-hero-secundario">Ir al panel de gestión</a></p>
             {% endif %}
+
+            <div class="dflex gap12 mt20 fww">
+                <a href="{% url 'usuarios:perfil' %}" class="btn-hero-secundario wauto">Mi perfil</a>
+                <a href="{% url 'usuarios:cambiar_password' %}" class="btn-hero-secundario wauto">Cambiar contraseña</a>
+                {% if user.es_trabajador %}
+                    <a href="{% url 'usuarios:cobertura' %}" class="btn-hero-secundario wauto">Mi cobertura</a>
+                {% endif %}
+            </div>
+
             <p class="txt-s fs13">Las pantallas de solicitudes, pagos, mensajes y administración se agregan en las siguientes fases; la barra de arriba se completa sola.</p>
         </div>
     </section>

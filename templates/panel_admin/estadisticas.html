@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block titulo %}Estadísticas - Cambell{% endblock %}
+
+{% block extra_head %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block contenido %}
+    <section class="p4060">
+        <h2 class="mb10">Reportes y estadísticas de operación</h2>
+        <p class="txt-s fs13">Filtra por rango de fechas, rol de usuario y estado de solicitud/pago. Los criterios se combinan entre sí y recalculan las tarjetas y las gráficas.</p>
+
+        {% include "_mensajes.html" %}
+
+        <div class="caja-filtros">
+            <form method="get" action="{% url 'panel_admin:estadisticas' %}">
+                <table class="filtro-tabla">
+                    <tr>
+                        <td class="w25">
+                            <label>Rol de usuario</label>
+                            <select name="rol">
+                                <option value="">Todos</option>
+                                {% for valor, etiqueta in roles %}
+                                    <option value="{{ valor }}" {% if valor == filtros.rol %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Estado de solicitud</label>
+                            <select name="estado_solicitud">
+                                <option value="">Todos</option>
+                                {% for valor, etiqueta in estados_solicitud %}
+                                    <option value="{{ valor }}" {% if valor == filtros.estado_solicitud %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Estado de pago</label>
+                            <select name="estado_pago">
+                                <option value="">Todos</option>
+                                {% for valor, etiqueta in estados_pago %}
+                                    <option value="{{ valor }}" {% if valor == filtros.estado_pago %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Desde</label>
+                            <input type="date" name="desde" value="{{ filtros.desde }}"
+                                   min="{{ fecha_minima|date:'Y-m-d' }}" max="{{ fecha_maxima|date:'Y-m-d' }}"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="w25">
+                            <label>Hasta</label>
+                            <input type="date" name="hasta" value="{{ filtros.hasta }}"
+                                   min="{{ fecha_minima|date:'Y-m-d' }}" max="{{ fecha_maxima|date:'Y-m-d' }}"/>
+                        </td>
+                        <td class="w25 filtro-fecha-ayuda">
+                            <p class="txt-s fs12 m0">Fechas por registro (usuarios), creación (solicitudes y anuncios) y fecha de pago. Sin estado de pago se usan los completados para ingresos y comisión.</p>
+                        </td>
+                    </tr>
+                </table>
+                <button type="submit" class="btn-hero-principal dib wauto">Filtrar</button>
+                <a href="{% url 'panel_admin:estadisticas' %}" class="txt-nar ml10">Limpiar filtros</a>
+                <span class="dib ml20 fs12 txt">Descargar:</span>
+                <a href="{% url 'panel_admin:exportar_estadisticas' 'pdf' %}?rol={{ filtros.rol|urlencode }}&amp;estado_solicitud={{ filtros.estado_solicitud|urlencode }}&amp;estado_pago={{ filtros.estado_pago|urlencode }}&amp;desde={{ filtros.desde }}&amp;hasta={{ filtros.hasta }}"
+                   class="btn-hero-principal dib wauto ml10">PDF</a>
+                <a href="{% url 'panel_admin:exportar_estadisticas' 'excel' %}?rol={{ filtros.rol|urlencode }}&amp;estado_solicitud={{ filtros.estado_solicitud|urlencode }}&amp;estado_pago={{ filtros.estado_pago|urlencode }}&amp;desde={{ filtros.desde }}&amp;hasta={{ filtros.hasta }}"
+                   class="btn-hero-principal dib wauto ml10">Excel</a>
+            </form>
+        </div>
+
+        <div class="grid-cards">
+            <div class="card-stat"><div class="lab">Usuarios totales</div><div class="num">{{ reporte.total_usuarios }}</div></div>
+            <div class="card-stat"><div class="lab">Clientes</div><div class="num">{{ reporte.clientes }}</div></div>
+            <div class="card-stat"><div class="lab">Trabajadores</div><div class="num">{{ reporte.trabajadores }}</div></div>
+            <div class="card-stat"><div class="lab">Aliados comerciales</div><div class="num">{{ reporte.aliados }}</div></div>
+            <div class="card-stat"><div class="lab">Solicitudes totales</div><div class="num">{{ reporte.total_solicitudes }}</div></div>
+            <div class="card-stat"><div class="lab">Solicitudes pendientes</div><div class="num">{{ reporte.conteo_solicitudes.pendiente }}</div></div>
+            <div class="card-stat"><div class="lab">Solicitudes aceptadas</div><div class="num">{{ reporte.conteo_solicitudes.aceptada }}</div></div>
+            <div class="card-stat"><div class="lab">Solicitudes completadas</div><div class="num">{{ reporte.conteo_solicitudes.completada }}</div></div>
+            <div class="card-stat"><div class="lab">Solicitudes canceladas</div><div class="num">{{ reporte.conteo_solicitudes.cancelada }}</div></div>
+            <div class="card-stat"><div class="lab">Pagos completados</div><div class="num">{{ reporte.total_pagos_completados }}</div></div>
+            <div class="card-stat"><div class="lab">Ingresos brutos</div><div class="num">$ {{ reporte.ingresos_brutos|floatformat:"2g" }}</div></div>
+            <div class="card-stat"><div class="lab">Comisión (3%) acumulada</div><div class="num">$ {{ reporte.comision_total|floatformat:"2g" }}</div></div>
+            <div class="card-stat"><div class="lab">Anuncios pendientes</div><div class="num">{{ reporte.anuncios_pendientes }}</div></div>
+            <div class="card-stat"><div class="lab">Reportes en revisión</div><div class="num">{{ reporte.reportes_en_revision }}</div></div>
+        </div>
+
+        <h3 class="mt40 mb10">Gráficas</h3>
+        <div class="grid-charts">
+            <div class="card-stat chart-card">
+                <div class="lab">Solicitudes por estado</div>
+                <canvas class="grafica" id="chartSolicitudes"></canvas>
+            </div>
+            <div class="card-stat chart-card">
+                <div class="lab">Distribución de usuarios por rol</div>
+                <canvas class="grafica" id="chartUsuarios"></canvas>
+            </div>
+            <div class="card-stat chart-card chart-full">
+                <div class="lab">Solicitudes e ingresos por mes</div>
+                <canvas class="grafica" id="chartLine"></canvas>
+            </div>
+        </div>
+
+        <h3 class="mt40 mb10">Detalle del reporte</h3>
+        <div class="sup br8 p20 mb20">
+            <h4 class="m0 mb10">Solicitudes por estado</h4>
+            <table class="tabla-usuarios">
+                <thead><tr><th>Estado</th><th>Cantidad</th></tr></thead>
+                <tbody>
+                    {% for etiqueta, cantidad in reporte.solicitudes_por_estado.items %}
+                        <tr><td>{{ etiqueta }}</td><td>{{ cantidad }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sup br8 p20 mb20">
+            <h4 class="m0 mb10">Usuarios por rol</h4>
+            <table class="tabla-usuarios">
+                <thead><tr><th>Rol</th><th>Cantidad</th></tr></thead>
+                <tbody>
+                    {% for etiqueta, cantidad in reporte.usuarios_por_rol.items %}
+                        <tr><td>{{ etiqueta }}</td><td>{{ cantidad }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="2">No hay usuarios que coincidan con los criterios seleccionados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sup br8 p20 mb20">
+            <h4 class="m0 mb10">Solicitudes e ingresos por mes</h4>
+            <table class="tabla-usuarios">
+                <thead><tr><th>Mes</th><th>Solicitudes</th><th>Ingresos</th></tr></thead>
+                <tbody>
+                    {% for fila in reporte.serie_mensual %}
+                        <tr>
+                            <td>{{ fila.mes }}</td>
+                            <td>{{ fila.solicitudes }}</td>
+                            <td>{% if fila.ingresos is not None %}$ {{ fila.ingresos|floatformat:"2g" }}{% else %}-{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="3">No hay datos en el rango seleccionado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {{ reporte.solicitudes_por_estado|json_script:"datos-estados" }}
+    {{ reporte.usuarios_por_rol|json_script:"datos-roles" }}
+    {{ reporte.serie_mensual|json_script:"datos-serie" }}
+
+    <script>
+        (function () {
+            function leer(id, defecto) {
+                var elemento = document.getElementById(id);
+                return elemento ? JSON.parse(elemento.textContent) : defecto;
+            }
+
+            var datosEstados = leer("datos-estados", {});
+            var datosRoles = leer("datos-roles", {});
+            var serie = leer("datos-serie", []);
+
+            if (typeof Chart === "undefined") {
+                document.querySelectorAll(".grafica").forEach(function (canvas) {
+                    var aviso = document.createElement("p");
+                    aviso.className = "txt-s fs12 m0";
+                    aviso.textContent = "No se pudo cargar la gráfica. Los datos están en las tablas de abajo.";
+                    canvas.replaceWith(aviso);
+                });
+                return;
+            }
+
+            var naranja = "#f97316";
+            var naranjaRelleno = "rgba(249, 115, 22, 0.25)";
+            var azul = "#38bdf8";
+            var azulRelleno = "rgba(56, 189, 248, 0.20)";
+            var paletaEstados = ["#f97316", "#38bdf8", "#ef4444", "#22c55e", "#a855f7", "#eab308"];
+            var paletaRoles = ["#f97316", "#38bdf8", "#a3e635"];
+            var nombresMeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+            function vacio(objeto) { return !objeto || Object.keys(objeto).length === 0; }
+            function etiquetas(objeto) { return Object.keys(objeto || {}); }
+            function valores(objeto) { return Object.values(objeto || {}); }
+            function colores(objeto, paleta) {
+                return etiquetas(objeto).map(function (_, i) { return paleta[i % paleta.length]; });
+            }
+            function nombreMes(mes) {
+                var partes = (mes || "").split("-");
+                return partes.length === 2 ? nombresMeses[Number(partes[1]) - 1] + " " + partes[0] : mes;
+            }
+            function moneda(valor) { return "$ " + Number(valor).toLocaleString("es-CO"); }
+
+            Chart.defaults.color = "#9aa3b2";
+            Chart.defaults.borderColor = "rgba(255, 255, 255, 0.08)";
+            Chart.defaults.font.family = "inherit";
+
+            var canvasEstados = document.getElementById("chartSolicitudes");
+            if (vacio(datosEstados)) {
+                canvasEstados.replaceWith(aviso("No hay solicitudes que coincidan con los criterios seleccionados."));
+            } else {
+                new Chart(canvasEstados, {
+                    type: "bar",
+                    data: {
+                        labels: etiquetas(datosEstados),
+                        datasets: [{
+                            label: "Solicitudes",
+                            data: valores(datosEstados),
+                            backgroundColor: colores(datosEstados, paletaEstados),
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: function (c) { return " " + c.parsed.y + " solicitud(es)"; } } }
+                        },
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }
+
+            var canvasRoles = document.getElementById("chartUsuarios");
+            if (vacio(datosRoles)) {
+                canvasRoles.replaceWith(aviso("No hay usuarios que coincidan con los criterios seleccionados."));
+            } else {
+                new Chart(canvasRoles, {
+                    type: "doughnut",
+                    data: {
+                        labels: etiquetas(datosRoles),
+                        datasets: [{
+                            data: valores(datosRoles),
+                            backgroundColor: colores(datosRoles, paletaRoles),
+                            borderColor: "#141414",
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        cutout: "60%",
+                        plugins: {
+                            legend: { position: "bottom" },
+                            tooltip: { callbacks: { label: function (c) { return " " + c.label + ": " + c.parsed + " usuario(s)"; } } }
+                        }
+                    }
+                });
+            }
+
+            var canvasLinea = document.getElementById("chartLine");
+            if (!serie || serie.length === 0) {
+                canvasLinea.replaceWith(aviso("No hay datos en el rango seleccionado."));
+            } else {
+                new Chart(canvasLinea, {
+                    type: "line",
+                    data: {
+                        labels: serie.map(function (f) { return nombreMes(f.mes); }),
+                        datasets: [
+                            {
+                                label: "Solicitudes",
+                                data: serie.map(function (f) { return f.solicitudes || 0; }),
+                                borderColor: naranja,
+                                backgroundColor: naranjaRelleno,
+                                yAxisID: "y",
+                                tension: 0.35,
+                                fill: true,
+                                pointRadius: 3
+                            },
+                            {
+                                label: "Ingresos",
+                                data: serie.map(function (f) { return Number(f.ingresos || 0); }),
+                                borderColor: azul,
+                                backgroundColor: azulRelleno,
+                                yAxisID: "y1",
+                                tension: 0.35,
+                                fill: true,
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            y1: {
+                                position: "right",
+                                beginAtZero: true,
+                                grid: { display: false },
+                                ticks: { callback: function (v) { return moneda(v); } }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (c) {
+                                        return " " + c.dataset.label + ": " +
+                                            (c.dataset.yAxisID === "y" ? c.parsed.y : moneda(c.parsed.y));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function aviso(texto) {
+                var p = document.createElement("p");
+                p.className = "txt-s fs12 m0";
+                p.style.color = "var(--texto-suave)";
+                p.style.padding = "20px 0";
+                p.textContent = texto;
+                return p;
+            }
+        })();
+    </script>
+{% endblock %}

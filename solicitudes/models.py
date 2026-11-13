@@ -1,3 +1,11 @@
+"""Solicitudes de servicio.
+
+Nota de diseno: en este proyecto no existe un modelo `Trabajo` aparte. Un
+"trabajo" es una `Solicitud` que ya tiene trabajador asignado y que avanza por
+los estados ACEPTADA, COMPLETADA o NO_ATENDIDA. El historial laboral de un
+trabajador se consulta filtrando `Solicitud` por `trabajador`, estado y fechas.
+Asi se evita duplicar la misma informacion en dos tablas.
+"""
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block titulo %}Notificaciones - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw760 mxa">
+        <h2>Notificaciones <span class="txt-s fs14">({{ total }})</span></h2>
+
+        {% include "_mensajes.html" %}
+        {% if no_leidos %}
+            <form method="post" action="{% url 'mensajeria:marcar_todas' %}" class="mb15">
+                {% csrf_token %}
+                <button type="submit" class="btn-hero-secundario wauto">
+                    Marcar todas como leídas ({{ no_leidos }})
+                </button>
+            </form>
+        {% endif %}
+
+        <div class="dflex fww gap8 mb18">
+            {% for valor, etiqueta in tipos %}
+                <a href="{% url 'mensajeria:notificaciones' %}{% if valor != 'TODOS' %}?tipo={{ valor }}{% endif %}"
+                   class="filtro-chip {% if tipo_filtro == valor %}activo{% endif %}">{{ etiqueta }}</a>
+            {% endfor %}
+        </div>
+
+        {% for n in notificaciones %}
+            <div class="sup br8 p1620 mb10 notif-card {% if n.leido %}notif-leida{% else %}notif-nueva{% endif %}">
+                <div class="dflex afs jcsb">
+                    <div class="flex1">
+                        <div class="dflex aci gap10">
+                            <span class="fs12 fw700 ttu {% if n.tipo == 'ESTADO' %}txt-nar{% elif n.tipo == 'ASIGNACION' %}txt-ok{% else %}txt-inf{% endif %}">
+                                {% if n.tipo == 'ASIGNACION' %}Solicitud compatible
+                                {% elif n.tipo == 'SOLICITUD' %}Estado de la solicitud
+                                {% elif n.tipo == 'VERIFICACION' %}Verificación
+                                {% elif n.tipo == 'ESTADO' %}Estado del servicio
+                                {% elif n.tipo == 'CALIFICACION' %}Calificación
+                                {% elif n.tipo == 'SUSCRIPCION' %}Suscripción
+                                {% elif n.tipo == 'PAGO' %}Pago
+                                {% elif n.tipo == 'DOCUMENTO' %}Documento
+                                {% elif n.tipo == 'SEGURIDAD' %}Seguridad
+                                {% elif n.tipo == 'MENSAJE' %}Mensaje nuevo
+                                {% else %}{{ n.tipo }}{% endif %}
+                            </span>
+                            {% if not n.leido %}
+                                <span class="txt-nar bdr-nar br10 fs11 p1x8">NUEVA</span>
+                            {% endif %}
+                        </div>
+                        <p class="txt-s m6t0">
+                            {% if n.solicitud %}
+                                <a href="{% url 'mensajeria:chat' n.solicitud_id %}" class="txt-inh tdn">{{ n.mensaje }}</a>
+                            {% else %}
+                                {{ n.mensaje }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="dflex afs fdcol gap6 ml12">
+                        <span class="txt-s fs12 wsnw">{{ n.fecha|date:"d/m H:i" }}</span>
+                        <div class="dflex gap6">
+                            {% if not n.leido %}
+                                <form method="post" action="{% url 'mensajeria:marcar_leida' n.id %}" class="dinl m0">
+                                    {% csrf_token %}
+                                    <button type="submit" title="Marcar como leída" class="bg0 txt-s b0 fs12 curp">Leída</button>
+                                </form>
+                            {% endif %}
+                            <form method="post" action="{% url 'mensajeria:eliminar' n.id %}" class="dinl m0"
+                                  onsubmit="return confirm('¿Eliminar esta notificación?');">
+                                {% csrf_token %}
+                                <button type="submit" title="Eliminar" class="bg0 txt-err b0 fs12 curp">✕</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="txt-s">No tienes notificaciones.</p>
+        {% endfor %}
+
+        {% if notificaciones.paginator.num_pages > 1 %}
+            <div class="tac my20">
+                {% if notificaciones.has_previous %}
+                    <a href="?tipo={{ tipo_filtro }}&pag={{ notificaciones.previous_page_number }}">← Anterior</a>
+                {% endif %}
+                <span class="txt-s txt-inf mr10 ml10">{{ notificaciones.number }} / {{ notificaciones.paginator.num_pages }}</span>
+                {% if notificaciones.has_next %}
+                    <a href="?tipo={{ tipo_filtro }}&pag={{ notificaciones.next_page_number }}">Siguiente →</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

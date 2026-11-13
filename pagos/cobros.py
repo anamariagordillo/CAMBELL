@@ -95,3 +95,32 @@ def pagar(solicitud_id, metodo_id, cliente):
             solicitud,
         )
     return pago
+
+
+# ------------------------------------------------------------------ Tareas programadas
+def transferir_netos():
+    """Marca como transferidos los pagos completados que aún no se han girado.
+
+    Es la versión Django de PagoService.transferirNetoTrabajadores(). Sigue
+    siendo simulado: no hay una transferencia bancaria real.
+    """
+    pagos = Pago.objects.filter(
+        estado=Pago.Estado.COMPLETADO,
+        estado_transferencia=Pago.EstadoTransferencia.PENDIENTE,
+    )
+
+    transferidos = 0
+    fallidos = 0
+    for pago in pagos:
+        if pago.neto_trabajador is None or pago.neto_trabajador <= 0:
+            pago.estado_transferencia = Pago.EstadoTransferencia.FALLIDO
+            pago.save(update_fields=["estado_transferencia"])
+            fallidos += 1
+            continue
+
+        pago.estado_transferencia = Pago.EstadoTransferencia.TRANSFERIDO
+        pago.fecha_transferencia = timezone.now()
+        pago.save(update_fields=["estado_transferencia", "fecha_transferencia"])
+        transferidos += 1
+
+    return {"revisados": transferidos + fallidos, "transferidos": transferidos, "fallidos": fallidos}

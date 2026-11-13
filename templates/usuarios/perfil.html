@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mi perfil - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card maxw560">
+            <h2>Mi perfil</h2>
+
+            {% include "_mensajes.html" %}
+
+            <p class="txt-s"><strong>Nombre:</strong> {{ user.nombre }}</p>
+            <p class="txt-s"><strong>Correo:</strong> {{ user.correo }}</p>
+            <p class="txt-s"><strong>Rol:</strong> {{ user.get_rol_display }}</p>
+            {% if user.telefono %}
+                <p class="txt-s"><strong>Teléfono:</strong> {{ user.telefono }}</p>
+            {% endif %}
+            {% if user.localidad %}
+                <p class="txt-s"><strong>Localidad:</strong> {{ user.localidad }}{% if user.barrio %} · {{ user.barrio }}{% endif %}</p>
+            {% endif %}
+            {% if user.numero_documento %}
+                <p class="txt-s"><strong>Número de documento:</strong> {{ user.numero_documento }}</p>
+            {% endif %}
+            {% if user.es_trabajador and user.calificacion_promedio %}
+                <p class="txt-s"><strong>Calificación promedio:</strong> {{ user.calificacion_promedio|floatformat:1 }}</p>
+            {% endif %}
+
+            <div class="dflex gap12 mt25 fww">
+                <a href="{% url 'usuarios:editar_perfil' %}" class="btn-hero-principal wauto">Editar datos</a>
+                <a href="{% url 'usuarios:cambiar_password' %}" class="btn-hero-secundario wauto">Cambiar contraseña</a>
+                {% if user.es_trabajador %}
+                    <a href="{% url 'usuarios:cobertura' %}" class="btn-hero-secundario wauto">Mi cobertura</a>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{% url 'usuarios:desactivar_cuenta' %}" class="sep pt20 mt25">
+                {% csrf_token %}
+                <button type="submit"
+                        onclick="return confirm('¿Seguro que quieres desactivar tu cuenta? Ya no podrás iniciar sesión ni recibir servicios. Un administrador puede reactivarla.');"
+                        class="sup-err txt-err bdr-err br6 fw600 curp p1218">
+                    Desactivar mi cuenta
+                </button>
+            </form>
+        </div>
+    </section>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mensajes del trabajo - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw760 mxa">
+        <h2>Mensajes del trabajo</h2>
+        <p class="txt-s">
+            <strong>{{ solicitud.descripcion }}</strong> ·
+            Cliente: <span>{{ solicitud.cliente.nombre }}</span> ·
+            Trabajador: <span>{% if solicitud.trabajador %}{{ solicitud.trabajador.nombre }}{% else %}Sin asignar{% endif %}</span>
+        </p>
+
+        {% include "_mensajes.html" %}
+
+        <div class="chat-caja">
+            {% for m in mensajes %}
+                <div class="chat-burbuja {% if m.emisor_id == user.id %}chat-propio{% else %}chat-ajeno{% endif %}">
+                    <p class="wspw m0">{{ m.contenido }}</p>
+                    <div class="chat-meta">
+                        {{ m.emisor.nombre }} · {{ m.fecha|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="txt-s tac p30">Aún no hay mensajes. Inicia la conversación.</p>
+            {% endfor %}
+        </div>
+
+        <form method="post" action="{% url 'mensajeria:chat' solicitud.id %}" class="sup br8 p20">
+            {% csrf_token %}
+            <textarea name="contenido" rows="3" required maxlength="2000"
+                      placeholder="Escribe tu mensaje..."
+                      class="campo txt-p rzv p12 w100"></textarea>
+            <br/><br/>
+            <button type="submit" class="btn-hero-principal dib wauto">Enviar</button>
+        </form>
+    </section>
+{% endblock %}

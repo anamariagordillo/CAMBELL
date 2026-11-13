@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mi suscripción - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw680 mxa">
+        <h2>Mi suscripción</h2>
+
+        {% include "_mensajes.html" %}
+
+        {% if not activa %}
+            <div class="sup br8 tac p25">
+                <h3 class="txt-narc m0">Plan Premium</h3>
+                <p class="txt-s fs14">Mayor visibilidad en las búsquedas y prioridad para recibir solicitudes compatibles.</p>
+                <p class="txt-p fs26 fw800 my12">$ {{ costo|floatformat:"0g" }}<span class="txt-s fs14"> /mes</span></p>
+                {% if suscripcion %}
+                    <p class="txt-err fw600">Tu suscripción está vencida. Contrátala de nuevo para renovarla.</p>
+                {% endif %}
+                <form method="post" action="{% url 'pagos:contratar_suscripcion' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-hero-principal">
+                        {% if suscripcion %}Reintentar pago del plan premium{% else %}Contratar plan premium{% endif %}
+                    </button>
+                </form>
+                <p class="txt-s fs12 mt10">Pago simulado: no se cobra dinero real.</p>
+            </div>
+        {% else %}
+            <div class="sup br8 p25">
+                <p class="txt-ok fs22 fw800 m0">Plan Premium activo</p>
+                <p class="txt-s">Vigente desde: {{ suscripcion.fecha_inicio|date:"d/m/Y" }}</p>
+                <p class="txt-s">Vence el: {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}</p>
+                <p class="txt-s">
+                    {% if suscripcion.renovacion_automatica %}
+                        Renovación automática: activada
+                    {% else %}
+                        Renovación automática: cancelada
+                    {% endif %}
+                </p>
+
+                <ul class="txt-s lh18">
+                    <li>Mayor visibilidad en los resultados de búsqueda.</li>
+                    <li>Prioridad en la asignación de solicitudes compatibles.</li>
+                    <li>Insignia de aliado de confianza en tu perfil.</li>
+                </ul>
+
+                {% if suscripcion.renovacion_automatica %}
+                    <form method="post" action="{% url 'pagos:cancelar_suscripcion' %}" class="sep pt15 mt15">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-hero-secundario sup-err bdr-err wauto"
+                                onclick="return confirm('¿Cancelar la renovación automática? Conservarás los beneficios hasta el fin del periodo pagado.');">
+                            Cancelar renovación automática
+                        </button>
+                    </form>
+                {% else %}
+                    <p class="sep pt15 mt15 txt-ok fw600">
+                        Renovación automática desactivada. Tu plan sigue activo hasta el
+                        {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}.
+                    </p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

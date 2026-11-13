@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reportes de seguridad - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060">
+        <h2 class="mb25">Reportes de seguridad</h2>
+
+        {% include "_mensajes.html" %}
+
+        <form method="get" action="{% url 'panel_admin:reportes' %}" class="sup br8 p20 mb20">
+            <div class="dflex fww gap15 afs">
+                <div>
+                    <label>Estado</label>
+                    <select name="estado">
+                        <option value="">Todos</option>
+                        {% for valor, etiqueta in estados %}
+                            <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex1">
+                    <label>Buscar</label>
+                    <input type="text" name="q" value="{{ filtros.q }}" placeholder="Nombre, correo o motivo" class="w100"/>
+                </div>
+                <div>
+                    <label>Desde</label>
+                    <input type="date" name="desde" value="{{ filtros.desde }}"/>
+                </div>
+                <div>
+                    <label>Hasta</label>
+                    <input type="date" name="hasta" value="{{ filtros.hasta }}"/>
+                </div>
+            </div>
+            <button type="submit" class="btn-hero-principal dib wauto mt15">Filtrar</button>
+            <a href="{% url 'panel_admin:reportes' %}" class="txt-nar ml10">Limpiar filtros</a>
+        </form>
+
+        {% for r in reportes %}
+            <div class="sup br8 p20 mb15">
+                <p>
+                    <strong>{{ r.reportante.nombre }}</strong> reportó a
+                    <strong>{{ r.reportado.nombre }}</strong>
+                    <span class="txt-s fs12">· {{ r.fecha|date:"d/m/Y H:i" }}</span>
+                </p>
+                <p class="txt-s fs12">Reportado: {{ r.reportado.correo }}</p>
+                <p>{{ r.motivo }}</p>
+                <p>
+                    Estado:
+                    {% if r.estado == 'BLOQUEADO' %}
+                        <span class="sup-err txt-err br10 fw700 p2x10">Bloqueado</span>
+                    {% elif r.estado == 'DESCARTADO' %}
+                        <span class="br10 fw700 p2x10">Descartado</span>
+                    {% else %}
+                        <span class="sup-amb txt-amb br10 fw700 p2x10">En revisión</span>
+                    {% endif %}
+                </p>
+
+                {% if r.estado == 'EN_REVISION' %}
+                    <div class="dflex fww gap10 mt10">
+                        <form method="post" action="{% url 'panel_admin:bloquear_reportado' r.id %}" class="dinl m0"
+                              onsubmit="return confirm('¿Bloquear a {{ r.reportado.nombre }} y cerrar este reporte?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-hero-secundario sup-err bdr-err wauto">Bloquear reportado</button>
+                        </form>
+                        <form method="post" action="{% url 'panel_admin:descartar_reporte' r.id %}" class="dinl m0"
+                              onsubmit="return confirm('¿Descartar este reporte?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-hero-secundario wauto">Descartar</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>No hay reportes con esos criterios.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

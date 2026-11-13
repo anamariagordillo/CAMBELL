@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titulo %}{% if es_edicion %}Editar anuncio{% else %}Publicar anuncio{% endif %} - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card maxw520">
+            <h2>{% if es_edicion %}Editar anuncio{% else %}Publicar anuncio{% endif %}</h2>
+            {% if not es_edicion %}
+                <p class="txt-s fs13 mb20">
+                    Tu anuncio quedará en <strong>revisión</strong> hasta que un administrador lo apruebe.
+                </p>
+            {% endif %}
+
+            {% include "_mensajes.html" %}
+
+            <form method="post" enctype="multipart/form-data"
+                  action="{% if es_edicion %}{% url 'anuncios:editar' anuncio.id %}{% else %}{% url 'anuncios:nuevo' %}{% endif %}">
+                {% csrf_token %}
+
+                <label for="{{ form.titulo.id_for_label }}">Título</label>
+                {{ form.titulo }}
+                {{ form.titulo.errors }}
+
+                <label for="{{ form.descripcion.id_for_label }}">Descripción</label>
+                {{ form.descripcion }}
+                {{ form.descripcion.errors }}
+
+                <label for="{{ form.imagen.id_for_label }}">
+                    Imagen (opcional){% if es_edicion %} — dejar vacío para conservar la actual{% endif %}
+                </label>
+                {{ form.imagen }}
+                {{ form.imagen.errors }}
+
+                {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+
+                <button type="submit" class="btn-hero-principal mt25 w100">
+                    {% if es_edicion %}Guardar cambios{% else %}Enviar a revisión{% endif %}
+                </button>
+                <p class="tac mt12">
+                    <a href="{% url 'anuncios:mios' %}">Volver a mis anuncios</a>
+                </p>
+            </form>
+        </div>
+    </section>
+{% endblock %}

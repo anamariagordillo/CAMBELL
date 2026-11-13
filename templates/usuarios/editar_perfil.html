@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block titulo %}Editar mis datos - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card">
+            <h2>Editar mis datos</h2>
+
+            {% include "_mensajes.html" %}
+
+            {% if form.non_field_errors %}
+                <p class="sup-err txt-err br8 p12 mb15">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </p>
+            {% endif %}
+
+            <form method="post" action="{% url 'usuarios:editar_perfil' %}" novalidate>
+                {% csrf_token %}
+
+                <label for="{{ form.nombre.id_for_label }}">Nombre completo</label>
+                {{ form.nombre }}
+                {% include "usuarios/_errores.html" with campo=form.nombre %}
+
+                <label for="{{ form.correo.id_for_label }}">Correo</label>
+                {{ form.correo }}
+                {% include "usuarios/_errores.html" with campo=form.correo %}
+
+                <label for="{{ form.telefono.id_for_label }}">Teléfono</label>
+                {{ form.telefono }}
+                {% include "usuarios/_errores.html" with campo=form.telefono %}
+
+                <label for="{{ form.localidad.id_for_label }}">Localidad</label>
+                {{ form.localidad }}
+                {% include "usuarios/_errores.html" with campo=form.localidad %}
+
+                <label for="{{ form.barrio.id_for_label }}">Barrio</label>
+                {{ form.barrio }}
+                {% include "usuarios/_errores.html" with campo=form.barrio %}
+
+                <button type="submit" class="btn-hero-principal mt20 w100">Guardar cambios</button>
+            </form>
+
+            <p class="auth-link">
+                <a href="{% url 'usuarios:perfil' %}">Volver a mi perfil</a>
+            </p>
+        </div>
+    </section>
+{% endblock %}

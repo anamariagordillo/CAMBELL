@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_cobro, views_ingresos
+from . import views, views_cobro, views_ingresos, views_suscripcion
 
 app_name = "pagos"
 
@@ -17,4 +17,8 @@ urlpatterns = [
     # Ingresos y reporte (trabajador)
     path("ingresos", views_ingresos.mis_ingresos, name="ingresos"),
     path("ingresos/exportar", views_ingresos.exportar_ingresos, name="exportar_ingresos"),
+    # Suscripción premium simulada
+    path("suscripcion", views_suscripcion.mi_suscripcion, name="suscripcion"),
+    path("suscripcion/contratar", views_suscripcion.contratar, name="contratar_suscripcion"),
+    path("suscripcion/cancelar", views_suscripcion.cancelar, name="cancelar_suscripcion"),
 ]

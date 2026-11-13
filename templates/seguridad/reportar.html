@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reportar - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="auth-container">
+        <div class="auth-card maxw520">
+            <h2>Reportar comportamiento inseguro</h2>
+
+            {% include "_mensajes.html" %}
+
+            <div class="sup br8 p15 mb20">
+                <p class="txt-s fs12 m0">Estás reportando a</p>
+                <p class="fw700 m4t0">{{ reportado.nombre }}</p>
+                <p class="txt-s m4t0">{{ reportado.correo }}</p>
+            </div>
+
+            <form method="post" action="{% url 'seguridad:reportar' solicitud.id %}">
+                {% csrf_token %}
+                <label for="motivo">Describe el motivo del reporte</label>
+                <textarea id="motivo" name="motivo" rows="5" required maxlength="1000"
+                          placeholder="Describe la conducta inapropiada o insegura..."
+                          class="campo txt-p p12 w100"></textarea>
+                <button type="submit" class="btn-hero-principal sup-err mt25 w100">Enviar reporte</button>
+            </form>
+        </div>
+    </section>
+{% endblock %}

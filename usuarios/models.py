@@ -1,7 +1,10 @@
+import hashlib
+import os
 from datetime import time
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils import timezone
 
@@ -113,6 +116,12 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     bloqueado = models.BooleanField(default=False)
     # Se activa cuando la contrasena no cumple la politica vigente (fase 5: /cambiar-password)
     debe_cambiar_password = models.BooleanField(default=False)
+
+    # Bloqueo temporal por intentos fallidos de inicio de sesion.
+    # No se confunde con `bloqueado`, que es el bloqueo manual del administrador.
+    intentos_fallidos = models.PositiveSmallIntegerField(default=0)
+    bloqueado_hasta = models.DateTimeField(null=True, blank=True)
+
     fecha_registro = models.DateTimeField(default=timezone.now)
 
     objects = UsuarioManager()
@@ -144,6 +153,19 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     @property
     def esta_verificado(self):
         return self.estado_verificacion == EstadoVerificacion.APROBADO
+
+    @property
+    def bloqueo_temporal_activo(self):
+        """True mientras dure el castigo por escribir mal la contrasena varias veces."""
+        return bool(self.bloqueado_hasta and self.bloqueado_hasta > timezone.now())
+
+    def minutos_de_bloqueo(self):
+        """Minutos que le faltan al bloqueo temporal (para el mensaje al usuario)."""
+        if not self.bloqueo_temporal_activo:
+            return 0
+        restante = self.bloqueado_hasta - timezone.now()
+        # Se redondea hacia arriba para no decir "0 minutos" cuando faltan segundos.
+        return max(1, int(restante.total_seconds() // 60) + 1)
 
 
 class DocumentoVersion(models.Model):
@@ -182,6 +204,218 @@ class CoberturaTrabajador(models.Model):
 
     class Meta:
         db_table = "cobertura_trabajador"
+
+
+class Horario(models.Model):
+    """Bloque de disponibilidad semanal de un trabajador (HU-T10).
+
+    Un trabajador puede tener varios bloques por dia (por ejemplo 8:00-12:00 y
+    14:00-18:00). `CoberturaTrabajador` sigue guardando la ventana general que ya
+    usaba la Fase 1; este modelo detalla los dias y las horas.
+    """
+
+    class Dia(models.IntegerChoices):
+        # Se usa el mismo numero que date.weekday(): 0 = lunes, 6 = domingo.
+        LUNES = 0, "Lunes"
+        MARTES = 1, "Martes"
+        MIERCOLES = 2, "Miércoles"
+        JUEVES = 3, "Jueves"
+        VIERNES = 4, "Viernes"
+        SABADO = 5, "Sábado"
+        DOMINGO = 6, "Domingo"
+
+    trabajador = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE, related_name="horarios"
+    )
+    dia_semana = models.PositiveSmallIntegerField(choices=Dia.choices)
+    hora_inicio = models.TimeField(default=time(8, 0))
+    hora_fin = models.TimeField(default=time(18, 0))
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "horarios_trabajador"
+        ordering = ["trabajador_id", "dia_semana", "hora_inicio"]
+        constraints = [
+            # No se repite el mismo bloque para el mismo trabajador y dia.
+            models.UniqueConstraint(
+                fields=["trabajador", "dia_semana", "hora_inicio", "hora_fin"],
+                name="horario_unico_por_bloque",
+            ),
+            # La base de datos tambien impide guardar un horario al reves.
+            models.CheckConstraint(
+                condition=models.Q(hora_fin__gt=models.F("hora_inicio")),
+                name="horario_hora_fin_mayor",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.hora_inicio and self.hora_fin and self.hora_fin <= self.hora_inicio:
+            raise ValidationError(
+                {"hora_fin": "La hora de fin debe ser posterior a la hora de inicio."}
+            )
+
+    def cubre(self, momento=None):
+        """True si este bloque cubre el dia y la hora indicados.
+
+        Si no se pasa un momento, se usa la fecha y hora actual de Bogota.
+        """
+        momento = momento or timezone.localtime()
+        if not self.activo or self.dia_semana != momento.weekday():
+            return False
+        return self.hora_inicio <= momento.time() <= self.hora_fin
+
+    def __str__(self):
+        return (
+            f"{self.get_dia_semana_display()} "
+            f"{self.hora_inicio:%H:%M}-{self.hora_fin:%H:%M}"
+        )
+
+
+class Archivo(models.Model):
+    """Registro de archivos sensibles de la plataforma (HU-S21, S22 y S23).
+
+    Guarda los datos que las fases siguientes necesitan para cifrar, limpiar y
+    versionar archivos: hash SHA-256, tamano, tipo MIME, version y vigencia.
+    `DocumentoVersion` se mantiene como el historial especifico del documento y
+    la selfie de identidad; este modelo sera el registro general de archivos.
+    """
+
+    class Tipo(models.TextChoices):
+        DOCUMENTO = "DOCUMENTO", "Documento de identidad"
+        SELFIE = "SELFIE", "Selfie"
+        DOCUMENTO_LEGAL = "DOCUMENTO_LEGAL", "Documento legal"
+        EVIDENCIA = "EVIDENCIA", "Evidencia de un servicio"
+        ANUNCIO = "ANUNCIO", "Imagen de un anuncio"
+        OTRO = "OTRO", "Otro"
+
+    propietario = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE, related_name="archivos"
+    )
+    tipo = models.CharField(max_length=20, choices=Tipo.choices)
+    archivo = models.FileField(upload_to="archivos/%Y/%m/", validators=[validar_extension])
+    nombre_original = models.CharField(max_length=255, blank=True)
+    mime = models.CharField(max_length=100, blank=True)
+    tamano_bytes = models.PositiveBigIntegerField(default=0)
+    # Huella del contenido: sirve para detectar archivos repetidos o alterados.
+    hash_sha256 = models.CharField(max_length=64, blank=True)
+    cifrado = models.BooleanField(default=False)
+    version = models.PositiveIntegerField(default=1)
+    vigente = models.BooleanField(default=True)
+    fecha = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "archivos"
+        ordering = ["-fecha"]
+
+    def calcular_hash(self):
+        """Calcula el SHA-256 del archivo y deja el puntero al inicio."""
+        resumen = hashlib.sha256()
+        self.archivo.open("rb")
+        self.archivo.seek(0)
+        for bloque in iter(lambda: self.archivo.read(8192), b""):
+            resumen.update(bloque)
+        self.archivo.seek(0)
+        return resumen.hexdigest()
+
+    def calcular_tamano(self):
+        """Mide el archivo sin cargarlo completo en memoria."""
+        posicion = self.archivo.tell()
+        self.archivo.seek(0, os.SEEK_END)
+        tamano = self.archivo.tell()
+        self.archivo.seek(posicion)
+        return tamano
+
+    def save(self, *args, **kwargs):
+        """Completa solo los datos que falten (nombre, tamano y hash)."""
+        if self.archivo:
+            self.nombre_original = self.nombre_original or os.path.basename(self.archivo.name)
+            try:
+                if not self.tamano_bytes:
+                    self.tamano_bytes = self.calcular_tamano()
+                if not self.hash_sha256:
+                    self.hash_sha256 = self.calcular_hash()
+            except (OSError, ValueError):
+                # Si el archivo no esta disponible, se guarda el registro sin esos datos.
+                pass
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} de {self.propietario.nombre}"
+
+
+class Verificacion(models.Model):
+    """Expediente de cada intento de verificacion de identidad.
+
+    `Usuario.estado_verificacion` guarda solo el estado actual. Este modelo
+    conserva el historial que piden las historias HU-T04, HU-T05, HU-A01 y
+    HU-S10: que se comparo, con que porcentaje, con que origen y quien decidio.
+    """
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        APROBADA = "APROBADA", "Aprobada"
+        RECHAZADA = "RECHAZADA", "Rechazada"
+        REVISION_MANUAL = "REVISION_MANUAL", "Requiere revisión manual"
+
+    class Origen(models.TextChoices):
+        AUTOMATICA = "AUTOMATICA", "Automática"
+        MANUAL = "MANUAL", "Manual"
+
+    trabajador = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE, related_name="verificaciones"
+    )
+    estado = models.CharField(
+        max_length=20, choices=Estado.choices, default=Estado.PENDIENTE
+    )
+    origen = models.CharField(
+        max_length=10, choices=Origen.choices, default=Origen.AUTOMATICA
+    )
+    porcentaje_coincidencia = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Resultado de la comparacion facial (0 a 100).",
+    )
+    documento = models.ForeignKey(
+        Archivo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verificaciones_documento",
+    )
+    selfie = models.ForeignKey(
+        Archivo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verificaciones_selfie",
+    )
+    motivo = models.CharField(max_length=500, blank=True)
+    revisor = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verificaciones_revisadas",
+    )
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+    fecha_decision = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "verificaciones"
+        ordering = ["-fecha_creacion"]
+
+    @property
+    def aprobada(self):
+        return self.estado == self.Estado.APROBADA
+
+    def __str__(self):
+        return (
+            f"Verificación #{self.pk} de {self.trabajador.nombre} "
+            f"({self.get_estado_display()})"
+        )
 
 
 class TokenRecuperacion(models.Model):

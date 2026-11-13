@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block titulo %}Anuncios - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060">
+        <h2 class="mb25">Anuncios pendientes de revisión</h2>
+
+        {% include "_mensajes.html" %}
+
+        {% for a in pendientes %}
+            <div class="sup br8 p20 mb15">
+                <p><strong>{{ a.titulo }}</strong></p>
+                <p>Aliado: <span>{{ a.aliado.nombre }}</span> ({{ a.aliado.correo }})</p>
+                {% if a.imagen %}
+                    <img src="{{ a.imagen.url }}" class="br6 my10" style="max-width: 180px;" alt="{{ a.titulo }}"/>
+                {% endif %}
+                <p class="txt-s">{{ a.descripcion }}</p>
+                <form method="post" action="{% url 'panel_admin:aprobar_anuncio' a.id %}" class="dib mr10">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-hero-principal wauto">Aprobar</button>
+                </form>
+                <form method="post" action="{% url 'panel_admin:rechazar_anuncio' a.id %}" class="dib"
+                      onsubmit="var m=this.motivo.value; if(!m || m.trim()===''){alert('Indica el motivo del rechazo.'); return false;} return true;">
+                    {% csrf_token %}
+                    <input type="text" name="motivo" placeholder="Motivo del rechazo" required class="campo txt-p mr10"/>
+                    <button type="submit" class="btn-hero-secundario wauto">Rechazar</button>
+                </form>
+            </div>
+        {% empty %}
+            <p>No hay anuncios pendientes.</p>
+        {% endfor %}
+
+        {% if publicados %}
+            <h3 class="txt-narc mt35">Publicados</h3>
+            {% for a in publicados %}
+                <div class="sup br8 p1620 mb10">
+                    <p class="fw600 m0">{{ a.titulo }} · {{ a.aliado.nombre }}</p>
+                    <p class="txt-s m4t0">{{ a.descripcion }}</p>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if rechazados %}
+            <h3 class="txt-narc mt35">Rechazados</h3>
+            {% for a in rechazados %}
+                <div class="sup br8 p1620 mb10">
+                    <p class="fw600 m0">{{ a.titulo }} · {{ a.aliado.nombre }}</p>
+                    <p class="txt-err fs13 m4t0">Motivo: {{ a.motivo_rechazo }}</p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </section>
+{% endblock %}

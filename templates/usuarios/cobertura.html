@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mi cobertura - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw720 mxa">
+        <h2>Mi cobertura y disponibilidad</h2>
+        <p class="txt-s">
+            Define dónde y cuándo estás disponible. Así el sistema te mostrará
+            las solicitudes compatibles con tu zona y tus oficios.
+        </p>
+
+        {% include "_mensajes.html" %}
+
+        <form method="post" action="{% url 'usuarios:cobertura' %}" class="sup br8 p24">
+            {% csrf_token %}
+
+            <label for="{{ form.radio_km.id_for_label }}">Radio de cobertura (km)</label>
+            {{ form.radio_km }}
+            {% include "usuarios/_errores.html" with campo=form.radio_km %}
+
+            <label>Horario disponible</label>
+            <div class="dflex gap10 mb10">
+                {{ form.hora_inicio }}
+                {{ form.hora_fin }}
+            </div>
+            {% include "usuarios/_errores.html" with campo=form.hora_inicio %}
+            {% include "usuarios/_errores.html" with campo=form.hora_fin %}
+
+            <label class="dflex aci gap8 mb15 ftn m0">
+                {{ form.disponible }} Estoy disponible ahora
+            </label>
+            {% include "usuarios/_errores.html" with campo=form.disponible %}
+
+            <label>Especialidades (si no marcas ninguna, aplican todas)</label>
+            <div class="dflex fww gap10 mb15">
+                {{ form.categorias }}
+            </div>
+            {% include "usuarios/_errores.html" with campo=form.categorias %}
+
+            <label>Localidades de cobertura (si no marcas ninguna, aplican todas)</label>
+            <div class="dflex fww gap10 mb20">
+                {{ form.localidades }}
+            </div>
+            {% include "usuarios/_errores.html" with campo=form.localidades %}
+
+            <button type="submit" class="btn-hero-principal dib wauto">Guardar cobertura</button>
+        </form>
+    </section>
+{% endblock %}

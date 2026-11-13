@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reembolsos - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060">
+        <h2 class="mb25">Reembolsos</h2>
+
+        {% include "_mensajes.html" %}
+
+        <h3 class="txt-narc">Disputas de pago justificadas</h3>
+        {% for p in pagos %}
+            <div class="sup br8 p20 mb15">
+                <p><strong>Pago #{{ p.id }}</strong> · {{ p.solicitud.descripcion }}</p>
+                <p>Cliente: <span>{{ p.cliente.nombre }}</span> · Trabajador: <span>{{ p.trabajador.nombre }}</span></p>
+                <p>Monto: ${{ p.monto_total }} · Comisión: ${{ p.comision }} · Neto trabajador: ${{ p.neto_trabajador }}</p>
+                {% if p.fecha_pago %}
+                    <p>Fecha de pago: {{ p.fecha_pago|date:"d/m/Y H:i" }}</p>
+                {% endif %}
+
+                {% if p.id in reembolsados %}
+                    <div class="txt-ok fw600 mt10">Ya reembolsado</div>
+                {% else %}
+                    <form method="post" action="{% url 'panel_admin:iniciar_reembolso' p.id %}" class="sep pt12 mt10">
+                        {% csrf_token %}
+                        <label>Motivo del reembolso (opcional)</label>
+                        <input type="text" name="motivo" placeholder="Ej. servicio no realizado"
+                               class="mt6 mb10 w100 maxw420"/>
+                        <br/>
+                        <button type="submit" class="btn-hero-principal wauto"
+                                onclick="return confirm('¿Iniciar el reembolso de este pago al cliente?');">
+                            Iniciar reembolso
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>No hay pagos completados aún.</p>
+        {% endfor %}
+
+        <h3 class="txt-narc mt35">Reembolsos realizados</h3>
+        {% for r in reembolsos %}
+            <div class="sup br8 p1620 mb10">
+                <p class="fw600 m0">Pago #{{ r.pago.id }} · ${{ r.monto }} · {{ r.motivo }}</p>
+                <p class="txt-s m4t0">
+                    Reembolsado a {{ r.pago.cliente.nombre }} el {{ r.fecha|date:"d/m/Y H:i" }}
+                </p>
+            </div>
+        {% empty %}
+            <p>Aún no hay reembolsos realizados.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

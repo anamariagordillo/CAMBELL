@@ -47,7 +47,9 @@ class NotificacionObservador:
 
     def actualizar(self, evento):
         s = evento.solicitud
-        if evento.tipo == TipoEvento.ACEPTADA:
+        if evento.tipo in (TipoEvento.CREADA, TipoEvento.REASIGNADA):
+            self._avisar_compatibles(s)
+        elif evento.tipo == TipoEvento.ACEPTADA:
             crear_notificacion(
                 s.cliente, "ESTADO",
                 f'Tu solicitud "{s.descripcion}" fue aceptada por {s.trabajador.nombre}. '
@@ -60,8 +62,25 @@ class NotificacionObservador:
                 f'El servicio "{s.descripcion}" fue completado. No olvides calificar y pagar.',
                 s,
             )
-        # CREADA y REASIGNADA avisan a los trabajadores compatibles con la zona.
-        # Eso depende de "Mi cobertura" (paso 5) y se conecta cuando exista.
+
+    def _avisar_compatibles(self, solicitud):
+        """Avisa a los trabajadores aprobados cuya cobertura encaja con la solicitud.
+
+        Se ordenan por cercanía para que los más cercanos reciban primero el aviso
+        (el orden de creación de las notificaciones es el que ve la bandeja).
+        """
+        from usuarios.cobertura import trabajadores_compatibles_por_cercania
+
+        zona = solicitud.zona or "tu zona"
+        precio = solicitud.precio_ofertado or 0
+        for trabajador in trabajadores_compatibles_por_cercania(solicitud):
+            crear_notificacion(
+                trabajador, "ASIGNACION",
+                f'Nueva solicitud compatible con tu cobertura: "{solicitud.descripcion}" '
+                f"en {zona} por ${precio:,.0f}.",
+                solicitud,
+            )
+
 
 
 class RecalculoPromedioObservador:

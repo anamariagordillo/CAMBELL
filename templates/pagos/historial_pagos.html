@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block titulo %}Historial de pagos - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw760 mxa">
+        <h2>Historial de pagos</h2>
+
+        {% for p in pagos %}
+            <div class="sup br8 p1620 mb10">
+                <div class="dflex aci jcsb">
+                    <div>
+                        <p class="fw600 m0">{{ p.solicitud.descripcion }}</p>
+                        <p class="txt-s m4t0">
+                            <span>$ {{ p.monto_total|floatformat:"-2g" }}</span> ·
+                            Comisión <span>$ {{ p.comision|floatformat:"-2g" }}</span> ·
+                            <span>{% if p.fecha_pago %}{{ p.fecha_pago|date:"d/m/Y H:i" }}{% else %}Pendiente{% endif %}</span>
+                        </p>
+                    </div>
+                    <div class="tar">
+                        <span class="{% if p.estado == 'COMPLETADO' %}txt-ok{% else %}txt-err{% endif %}">{{ p.get_estado_display }}</span>
+                        {% if p.estado == 'COMPLETADO' %}
+                            <a href="{% url 'pagos:comprobante' p.id %}" class="btn-hero-secundario dblk tdn mt6 wauto">Comprobante</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="txt-s">Aún no tienes pagos registrados.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

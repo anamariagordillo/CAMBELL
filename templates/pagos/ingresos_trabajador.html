@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block titulo %}Mis ingresos - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw760 mxa">
+        <div class="sup br8 p20 mb20">
+            <div class="dflex aci jcsb fww">
+                <div>
+                    <p class="fw800 fs24 m0 txt-nar">Cambell</p>
+                    <p class="txt-s fs12 m4t0">Conectamos el talento de tu barrio, con seguridad</p>
+                </div>
+                <div class="tar">
+                    <p class="fw700 m0">Mis ingresos</p>
+                    <p class="txt-s fs12 m4t0">Trabajador: {{ user.nombre }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sup br8 tac p25 mb25">
+            <p class="txt-s fs13 m0">Total neto acumulado (tras comisión del {{ porcentaje }}%)</p>
+            <p class="txt-nar fs36 fw800 m8t0">$ {{ total|floatformat:"-2g" }}</p>
+        </div>
+
+        {% include "_mensajes.html" %}
+
+        <form method="get" action="{% url 'pagos:exportar_ingresos' %}" class="sup br8 p16 mb20 maxw480">
+            <strong class="txt-narc">Exportar reporte de ingresos</strong>
+            <p class="txt-s fs13 mt6 mb10">Selecciona un rango de fechas (opcional) y un formato para descargar el detalle de tus pagos.</p>
+            <p class="txt-s fs12 m0 mb10">Rango permitido: {{ fecha_minima|date:"d/m/Y" }} al {{ fecha_maxima|date:"d/m/Y" }}.</p>
+
+            <label>Desde</label>
+            <input type="date" name="desde" class="mb10" min="{{ fecha_minima|date:'Y-m-d' }}" max="{{ fecha_maxima|date:'Y-m-d' }}"/>
+            <label>Hasta</label>
+            <input type="date" name="hasta" class="mb10" min="{{ fecha_minima|date:'Y-m-d' }}" max="{{ fecha_maxima|date:'Y-m-d' }}"/>
+            <br/>
+            <div class="dflex gap8 mt5 fww">
+                <button type="submit" name="formato" value="pdf" class="btn-hero-principal wauto">Descargar PDF</button>
+                <button type="submit" name="formato" value="excel" class="btn-hero-secundario wauto">Descargar Excel</button>
+                <button type="submit" name="formato" value="csv" class="btn-hero-secundario wauto">Descargar CSV</button>
+            </div>
+        </form>
+
+        {% for p in pagos %}
+            <div class="sup br8 p1620 mb10">
+                <div class="dflex aci jcsb">
+                    <div>
+                        <p class="fw600 m0">{{ p.solicitud.descripcion }}</p>
+                        <p class="txt-s m4t0">
+                            Cliente: <span>{{ p.cliente.nombre }}</span> ·
+                            <span>{% if p.fecha_pago %}{{ p.fecha_pago|date:"d/m/Y H:i" }}{% endif %}</span>
+                        </p>
+                    </div>
+                    <div class="tar">
+                        {% if p.estado == 'COMPLETADO' %}
+                            <p class="txt-ok fw600 m0">+$ {{ p.neto_trabajador|floatformat:"-2g" }}</p>
+                            <p class="txt-s fs12 m2t0">bruto $ {{ p.monto_total|floatformat:"-2g" }} · comisión $ {{ p.comision|floatformat:"-2g" }}</p>
+                        {% else %}
+                            <p class="txt-err fw600 m0">{{ p.get_estado_display }}</p>
+                            <p class="txt-s fs12 m2t0">no suma a tus ingresos</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="txt-s">Aún no tienes pagos recibidos.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

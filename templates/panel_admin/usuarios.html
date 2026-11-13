@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block titulo %}Gestión de usuarios - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060">
+        <h2 class="mb25">Gestión de usuarios</h2>
+        <p class="txt-s fs13">Filtra por rol, localidad, estado de cuenta, verificación y rango de fechas. Los criterios se combinan entre sí.</p>
+
+        {% include "_mensajes.html" %}
+
+        <div class="caja-filtros">
+            <form method="get" action="{% url 'panel_admin:usuarios' %}">
+                <table class="filtro-tabla">
+                    <tr>
+                        <td class="w25">
+                            <label>Rol</label>
+                            <select name="rol">
+                                <option value="">Todos</option>
+                                {% for valor, etiqueta in roles %}
+                                    <option value="{{ valor }}" {% if valor == filtros.rol %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Localidad</label>
+                            <select name="localidad">
+                                <option value="">Todas</option>
+                                {% for nombre in localidades %}
+                                    <option value="{{ nombre }}" {% if nombre == filtros.localidad %}selected{% endif %}>{{ nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Verificación</label>
+                            <select name="estado_verificacion">
+                                <option value="">Todas</option>
+                                {% for valor, etiqueta in estados %}
+                                    <option value="{{ valor }}" {% if valor == filtros.estado_verificacion %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="w25">
+                            <label>Estado de cuenta</label>
+                            <select name="cuenta">
+                                <option value="">Todas</option>
+                                <option value="activos" {% if filtros.cuenta == 'activos' %}selected{% endif %}>Activas</option>
+                                <option value="bloqueados" {% if filtros.cuenta == 'bloqueados' %}selected{% endif %}>Bloqueadas</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="w25">
+                            <label><input type="text" name="q" placeholder="Buscar por nombre, correo o teléfono" value="{{ filtros.q }}"/></label>
+                        </td>
+                        <td class="w25">
+                            <label>Desde</label>
+                            <input type="date" name="desde" value="{{ filtros.desde }}"/>
+                        </td>
+                        <td class="w25">
+                            <label>Hasta</label>
+                            <input type="date" name="hasta" value="{{ filtros.hasta }}"/>
+                        </td>
+                        <td class="w25 filtro-fecha-ayuda">
+                            <p class="txt-s fs12 m0">El rango de fechas filtra por fecha de registro.</p>
+                        </td>
+                    </tr>
+                </table>
+                <button type="submit" class="btn-hero-principal dib wauto">Filtrar</button>
+                <a href="{% url 'panel_admin:usuarios' %}" class="txt-nar ml10">Limpiar filtros</a>
+            </form>
+        </div>
+
+        {% if resultados %}
+            <table class="tabla-usuarios">
+                <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Verificación</th><th>Estado</th><th>Registro</th><th>Acción</th></tr>
+                {% for u in resultados %}
+                    <tr>
+                        <td>{{ u.nombre }}</td>
+                        <td>{{ u.correo }}</td>
+                        <td>{{ u.get_rol_display }}</td>
+                        <td>
+                            <span class="badge">
+                                {% if u.estado_verificacion == 'APROBADO' %}<span class="sup-ok txt-ok">Aprobado</span>
+                                {% elif u.estado_verificacion == 'RECHAZADO' %}<span class="sup-err txt-err">Rechazado</span>
+                                {% else %}<span class="sup-amb txt-amb">Pendiente</span>{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if u.bloqueado %}<span class="badge badge-bloq">Bloqueado</span>
+                            {% else %}<span class="badge badge-activo">Activo</span>{% endif %}
+                        </td>
+                        <td>{{ u.fecha_registro|date:"d/m/Y" }}</td>
+                        <td>
+                            <a href="{% url 'panel_admin:historial' u.id %}" class="txt-inf">Historial</a>
+                            <a href="{% url 'panel_admin:editar_usuario' u.id %}" class="txt-nar ml10">Editar</a>
+                            {% if u.id == user.id %}
+                                <span class="txt-s fs12 ml10">(tu cuenta)</span>
+                            {% elif u.bloqueado %}
+                                <form method="post" action="{% url 'panel_admin:reactivar' u.id %}" class="dinl ml10">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-hero-secundario wauto">Reactivar</button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{% url 'panel_admin:bloquear' u.id %}" class="dinl ml10"
+                                    onsubmit="return confirm('¿Bloquear a este usuario? No podrá iniciar sesión.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-hero-secundario sup-err bdr-err wauto">Bloquear</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p class="sup-err sup br8 p16 txt-err fw600">
+                No hay usuarios que coincidan con los criterios seleccionados.
+            </p>
+        {% endif %}
+    </section>
+{% endblock %}

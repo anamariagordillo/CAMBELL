@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block titulo %}Verificaciones pendientes - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p60">
+        <h2 class="mb30">Verificaciones pendientes</h2>
+
+        {% include "_mensajes.html" %}
+
+        {% for t in trabajadores %}
+            <div class="dflex afs gap20 sup br8 p20 mb20">
+                <div>
+                    <p><strong>{{ t.nombre }}</strong></p>
+                    <p>Correo: <span>{{ t.correo }}</span></p>
+                    <p>Documento: <span>{{ t.numero_documento|default:"-" }}</span></p>
+                    {% if t.motivo_verificacion %}
+                        <p class="fs12"><strong>Motivo de la revisión:</strong> <span>{{ t.motivo_verificacion }}</span></p>
+                    {% endif %}
+
+                    <div class="dflex gap15 mt15">
+                        {% if t.documento %}
+                            <div>
+                                <p class="txt-s fs12">Documento</p>
+                                {% if t.documento.name|lower|slice:"-4:" == ".pdf" %}
+                                    <a href="{% url 'panel_admin:imagen' t.id %}?tipo=documento" target="_blank" rel="noopener" class="txt-nar">Abrir el PDF</a>
+                                {% else %}
+                                    <img src="{% url 'panel_admin:imagen' t.id %}?tipo=documento" class="br6 w180" alt="Documento"/>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% if t.selfie %}
+                            <div>
+                                <p class="txt-s fs12">Selfie</p>
+                                <img src="{% url 'panel_admin:imagen' t.id %}?tipo=selfie" class="br6 w180" alt="Selfie"/>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt15">
+                        <form method="post" action="{% url 'panel_admin:aprobar' t.id %}" class="dib mr10">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-hero-principal wauto">Aprobar</button>
+                        </form>
+                        <form method="post" action="{% url 'panel_admin:rechazar' t.id %}" class="dib"
+                            onsubmit="return confirm('¿Rechazar la verificación de este trabajador?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-hero-secundario wauto">Rechazar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p>No hay verificaciones pendientes.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

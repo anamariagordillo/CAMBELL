@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block titulo %}Pagar servicio - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060 maxw640 mxa">
+        <h2>Pagar servicio</h2>
+
+        {% include "_mensajes.html" %}
+
+        <div class="resumen">
+            <p class="fw600 m0">{{ solicitud.descripcion }}</p>
+            <p class="txt-s m4t0">Trabajador: <span>{% if solicitud.trabajador %}{{ solicitud.trabajador.nombre }}{% else %}-{% endif %}</span></p>
+
+            <div class="mt15">
+                <div class="fila-resumen">
+                    <span class="desc">Monto total del servicio</span>
+                    <span>{% if solicitud.precio_ofertado %}$ {{ solicitud.precio_ofertado|floatformat:"-2g" }}{% else %}Sin precio{% endif %}</span>
+                </div>
+                {% if pago %}
+                    <div class="fila-resumen"><span class="desc">Comisión Cambell ({{ porcentaje }}%)</span><span>$ {{ pago.comision|floatformat:"-2g" }}</span></div>
+                    <div class="fila-resumen"><span class="desc">Neto para el trabajador</span><span>$ {{ pago.neto_trabajador|floatformat:"-2g" }}</span></div>
+                {% else %}
+                    <div class="fila-resumen"><span class="desc">Comisión Cambell ({{ porcentaje }}%)</span><span>se calcula al pagar</span></div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if pago and pago.estado == 'COMPLETADO' %}
+            <div class="sup-ok br8 p20 mb20">
+                <p class="txt-ok m0">Pago recibido</p>
+                <p class="txt-s m6t0">El trabajador recibirá el neto de este servicio.</p>
+                <p class="txt-s m6t0">Método: <span>{% if pago.metodo_pago %}{{ pago.metodo_pago.numero_enmascarado }}{% else %}-{% endif %}</span></p>
+                <p class="txt-s m6t0">Fecha: <span>{% if pago.fecha_pago %}{{ pago.fecha_pago|date:"d/m/Y H:i" }}{% else %}-{% endif %}</span></p>
+                <a href="{% url 'pagos:comprobante' pago.id %}" class="btn-hero-principal dib mt15 wauto">Ver comprobante</a>
+            </div>
+        {% elif not completada %}
+            <div class="sup br8 p20 mb20">
+                <p class="m0">Este servicio todavía no está completado.</p>
+                <p class="txt-s m6t0">Podrás pagarlo cuando el trabajador lo finalice.</p>
+                <a href="{% url 'solicitudes:mis_solicitudes' %}" class="btn-hero-secundario dib mt15 wauto">Volver a mis solicitudes</a>
+            </div>
+        {% else %}
+            {% if pago and pago.estado == 'FALLIDO' %}
+                <div class="sup-err br8 p20 mb20">
+                    <p class="txt-err m0">El pago falló. Revisa tu método de pago e inténtalo de nuevo.</p>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'pagos:realizar_pago' solicitud.id %}" class="sup br8 p20">
+                {% csrf_token %}
+                <label>Método de pago</label>
+                <select name="metodo_id" required class="campo txt-p p10 mb15 w100">
+                    <option value="">Selecciona un método</option>
+                    {% for m in metodos %}
+                        <option value="{{ m.id }}" {% if solicitud.metodo_pago_id == m.id %}selected{% endif %}>{{ m.get_tipo_display }} · {{ m.numero_enmascarado }} ({{ m.titular }})</option>
+                    {% endfor %}
+                </select>
+
+                {% if not metodos %}
+                    <p class="txt-s fs13">
+                        No tienes métodos de pago registrados.
+                        <a href="{% url 'pagos:metodos' %}" class="txt-nar">Registrar uno</a>
+                    </p>
+                {% elif solicitud.metodo_pago %}
+                    <p class="txt-s fs12">
+                        Se preseleccionó el método
+                        <strong>{{ solicitud.metodo_pago.get_tipo_display }} · {{ solicitud.metodo_pago.numero_enmascarado }}</strong>
+                        indicado al publicar la solicitud.
+                    </p>
+                {% endif %}
+
+                <button type="submit" class="btn-hero-principal dib wauto">
+                    Pagar {% if solicitud.precio_ofertado %}$ {{ solicitud.precio_ofertado|floatformat:"-2g" }}{% endif %}
+                </button>
+            </form>
+        {% endif %}
+    </section>
+{% endblock %}

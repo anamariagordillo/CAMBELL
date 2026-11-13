@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block titulo %}Historial de actividad - Cambell{% endblock %}
+
+{% block contenido %}
+    <section class="p4060">
+        <a href="{% url 'panel_admin:usuarios' %}" class="txt-inf">← Volver a usuarios</a>
+        <h2 class="m1505">Historial de actividad</h2>
+        <p class="txt-s">{{ usuario.nombre }} · {{ usuario.correo }} · {{ usuario.get_rol_display }}</p>
+
+        {% if actividad %}
+            <table class="tabla-act">
+                <tr><th>Fecha</th><th>Tipo</th><th>Detalle</th></tr>
+                {% for a in actividad %}
+                    <tr>
+                        <td>{% if a.fecha %}{{ a.fecha|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+                        <td>
+                            <span class="chip">
+                                {% if a.tipo == 'Solicitud' %}<span class="sup-inf txt-inf">Solicitud</span>
+                                {% elif a.tipo == 'Pago' %}<span class="sup-ok txt-ok">Pago</span>
+                                {% else %}<span class="sup-err txt-err">Reporte</span>{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ a.detalle }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>Sin actividad registrada.</p>
+        {% endif %}
+    </section>
+{% endblock %}

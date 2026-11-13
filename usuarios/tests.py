@@ -115,7 +115,7 @@ class RegistroTests(TestCase):
         r = self.client.post(reverse("usuarios:registro"), datos)
         errores = r.context["form"].errors
         for campo in ("telefono", "localidad", "oficio", "anios_experiencia", "cuenta_bancaria",
-                      "numero_documento", "documento", "selfie"):
+                "numero_documento", "documento", "selfie"):
             self.assertIn(campo, errores)
 
     def test_trabajador_exitoso_queda_pendiente(self):
@@ -166,15 +166,21 @@ class LoginTests(TestCase):
     def entrar(self, correo, password=PASSWORD):
         return self.client.post(reverse("usuarios:login"), {"username": correo, "password": password})
 
-    def test_login_cliente_va_al_panel(self):
-        self.assertRedirects(self.entrar("cli@example.com"), reverse("usuarios:panel"))
+    def test_login_cliente_va_a_nueva_solicitud(self):
+        self.assertRedirects(self.entrar("cli@example.com"), reverse("solicitudes:nueva"))
 
-    def test_login_admin_va_a_gestion(self):
-        r = self.entrar("adm@example.com")
-        self.assertRedirects(r, reverse("admin:index"), fetch_redirect_response=False)
+    def test_login_trabajador_va_a_solicitudes_disponibles(self):
+        Usuario.objects.create_user(
+            "trab@example.com", PASSWORD, nombre="Trab", rol=Rol.TRABAJADOR,
+            estado_verificacion=EstadoVerificacion.APROBADO,
+        )
+        self.assertRedirects(self.entrar("trab@example.com"), reverse("solicitudes:disponibles"))
+
+    def test_login_admin_va_a_verificaciones(self):
+        self.assertRedirects(self.entrar("adm@example.com"), reverse("panel_admin:verificaciones"))
 
     def test_login_no_distingue_mayusculas_en_el_correo(self):
-        self.assertRedirects(self.entrar("CLI@Example.com"), reverse("usuarios:panel"))
+        self.assertRedirects(self.entrar("CLI@Example.com"), reverse("solicitudes:nueva"))
 
     def test_credenciales_incorrectas(self):
         r = self.entrar("cli@example.com", "otra-clave")
